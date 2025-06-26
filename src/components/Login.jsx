@@ -11,8 +11,10 @@ function Login() {
   const [showSignup, setShowSignup] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [currentUserForVerification, setCurrentUserForVerification] = useState(null);
 
-  const { login, signup, loginWithGoogle, resetPassword } = useAuth();
+  const { login, signup, loginWithGoogle, resetPassword, sendVerificationEmail } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -32,11 +34,20 @@ function Login() {
       
       if (showSignup) {
         await signup(email, password, displayName);
+        setShowVerificationMessage(true);
+        setError('');
+        // Don't navigate immediately, show verification message instead
       } else {
-        await login(email, password);
+        const userCredential = await login(email, password);
+        if (!userCredential.user.emailVerified) {
+          // For existing users who haven't verified their email
+          setCurrentUserForVerification(userCredential.user);
+          setError('');
+          setShowVerificationMessage(true);
+          return;
+        }
+        navigate('/dashboard'); // Only navigate if email is verified
       }
-      
-      navigate('/dashboard'); // Redirect to dashboard or home page
     } catch (error) {
       setError(getErrorMessage(error.code));
     } finally {
@@ -49,7 +60,7 @@ function Login() {
       setError('');
       setLoading(true);
       await loginWithGoogle();
-      navigate('/dashboard'); // Redirect to dashboard or home page
+      navigate('/dashboard'); // Google accounts are automatically verified
     } catch (error) {
       setError(getErrorMessage(error.code));
     } finally {
@@ -77,6 +88,19 @@ function Login() {
     }
   };
 
+  const handleResendVerification = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      await sendVerificationEmail(currentUserForVerification);
+      alert('Verification email sent! Check your inbox.');
+    } catch (error) {
+      setError('Failed to send verification email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getErrorMessage = (errorCode) => {
     switch (errorCode) {
       case 'auth/user-not-found':
@@ -91,10 +115,57 @@ function Login() {
         return 'Please enter a valid email address';
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later';
+      case 'auth/user-disabled':
+        return 'This account has been disabled';
+      case 'auth/operation-not-allowed':
+        return 'Email/password accounts are not enabled';
       default:
         return 'An error occurred. Please try again';
     }
   };
+
+  // Show verification message after successful signup OR for unverified existing users
+  if (showVerificationMessage) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="verification-message">
+            <h2>📧 Email Verification Required</h2>
+            <p>We need to verify your email address: <strong>{email}</strong></p>
+            <p>Please check your inbox and click the verification link to activate your account.</p>
+            <p className="verification-note">
+              <strong>After clicking the verification link:</strong> Come back to this page and try logging in again.
+            </p>
+            {error && <div className="error-message">{error}</div>}
+            <div className="verification-actions">
+              <button 
+                type="button" 
+                className="auth-button"
+                onClick={handleResendVerification}
+                disabled={loading}
+              >
+                {loading ? 'Sending...' : 'Send Verification Email'}
+              </button>
+              <button 
+                type="button" 
+                className="link-button"
+                onClick={() => {
+                  setShowVerificationMessage(false);
+                  setShowSignup(false);
+                  setEmail('');
+                  setPassword('');
+                  setDisplayName('');
+                  setError('');
+                }}
+              >
+                Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (showForgotPassword) {
     return (

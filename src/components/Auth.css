@@ -168,6 +168,44 @@
   text-align: center;
 }
 
+.verification-message {
+  text-align: center;
+}
+
+.verification-message h2 {
+  color: #38a169;
+  margin-bottom: 16px;
+  font-size: 24px;
+}
+
+.verification-message p {
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.verification-note {
+  background: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  padding: 12px;
+  color: #0c4a6e !important;
+  font-size: 14px;
+}
+
+.verification-actions {
+  margin-top: 24px;
+}
+
+.verification-actions .auth-button {
+  margin-bottom: 16px;
+}
+
+.verification-actions .link-button {
+  display: block;
+  margin: 0 auto;
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .auth-container {

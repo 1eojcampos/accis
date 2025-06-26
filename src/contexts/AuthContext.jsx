@@ -6,6 +6,7 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase/config';
@@ -26,6 +27,8 @@ export function AuthProvider({ children }) {
     if (displayName) {
       await updateProfile(userCredential.user, { displayName });
     }
+    // Send email verification
+    await sendEmailVerification(userCredential.user);
     return userCredential;
   };
 
@@ -49,6 +52,15 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   };
 
+  // Send email verification
+  const sendVerificationEmail = (user = null) => {
+    const targetUser = user || currentUser;
+    if (targetUser) {
+      return sendEmailVerification(targetUser);
+    }
+    throw new Error('No user is currently signed in');
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -64,7 +76,8 @@ export function AuthProvider({ children }) {
     login,
     loginWithGoogle,
     logout,
-    resetPassword
+    resetPassword,
+    sendVerificationEmail
   };
 
   return (
