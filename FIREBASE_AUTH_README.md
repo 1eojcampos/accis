@@ -22,20 +22,29 @@ A React application with Firebase authentication featuring traditional login/sig
 4. Enable Email/Password and Google sign-in methods
 5. Copy your Firebase configuration object
 
-### 2. Configure Firebase
+### 2. Configure Firebase (Secure Method)
 
-Replace the placeholder values in `src/firebase/config.js` with your actual Firebase configuration:
+**IMPORTANT**: Never commit your actual Firebase credentials to version control!
 
-```javascript
-const firebaseConfig = {
-  apiKey: "your-actual-api-key",
-  authDomain: "your-actual-auth-domain",
-  projectId: "your-actual-project-id",
-  storageBucket: "your-actual-storage-bucket",
-  messagingSenderId: "your-actual-messaging-sender-id",
-  appId: "your-actual-app-id"
-};
-```
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit the `.env` file and replace placeholder values with your actual Firebase configuration:
+   ```
+   VITE_FIREBASE_API_KEY=your-actual-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-actual-auth-domain
+   VITE_FIREBASE_PROJECT_ID=your-actual-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-actual-storage-bucket
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-actual-messaging-sender-id
+   VITE_FIREBASE_APP_ID=your-actual-app-id
+   VITE_FIREBASE_MEASUREMENT_ID=your-actual-measurement-id
+   ```
+
+3. The `.env` file is already in `.gitignore` and will not be committed to your repository.
+
+**Security Note**: The `.env` file contains sensitive information and should never be committed to version control. Share these credentials securely with team members through encrypted channels.
 
 ### 3. Enable Authentication Methods
 
@@ -108,12 +117,16 @@ Before deploying, make sure to:
 3. Configure OAuth consent screen for Google Sign-In
 4. Test all authentication flows in production environment
 
-## Environment Variables (Optional)
+## Environment Variables
 
-For additional security, you can use environment variables for Firebase configuration:
+This project uses environment variables to securely store Firebase configuration.
 
-Create a `.env` file in the root directory:
+### Setup
+1. Copy `.env.example` to `.env`
+2. Fill in your actual Firebase configuration values
+3. Never commit the `.env` file to version control
 
+### Available Variables
 ```
 VITE_FIREBASE_API_KEY=your-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-auth-domain
@@ -121,20 +134,15 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-storage-bucket
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
 ```
 
-Then update `src/firebase/config.js` to use these variables:
-
-```javascript
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
-};
-```
+### Security Best Practices
+- ✅ `.env` is in `.gitignore` 
+- ✅ Use `.env.example` for team onboarding
+- ✅ Store production secrets in deployment platform
+- ❌ Never commit actual credentials to git
+- ❌ Never share credentials in plain text
 
 ## Troubleshooting
 
