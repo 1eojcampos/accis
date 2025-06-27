@@ -10,6 +10,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [userType, setUserType] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
   const [currentUserForVerification, setCurrentUserForVerification] = useState(null);
@@ -28,12 +29,16 @@ function Login() {
       return setError('Please enter your full name');
     }
 
+    if (showSignup && !userType) {
+      return setError('Please select whether you are a Printer or Customer');
+    }
+
     try {
       setError('');
       setLoading(true);
       
       if (showSignup) {
-        await signup(email, password, displayName);
+        await signup(email, password, displayName, userType);
         setShowVerificationMessage(true);
         setError('');
         // Don't navigate immediately, show verification message instead
@@ -219,17 +224,41 @@ function Login() {
         
         <form onSubmit={handleSubmit}>
           {showSignup && (
-            <div className="form-group">
-              <label htmlFor="displayName">Full Name</label>
-              <input
-                type="text"
-                id="displayName"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your full name"
-                required
-              />
-            </div>
+            <>
+              <div className="form-group">
+                <label htmlFor="displayName">Full Name</label>
+                <input
+                  type="text"
+                  id="displayName"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter your full name"
+                  required
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>I am a:</label>
+                <div className="user-type-selection">
+                  <div 
+                    className={`user-type-card ${userType === 'printer' ? 'selected' : ''}`}
+                    onClick={() => setUserType('printer')}
+                  >
+                    <div className="user-type-icon">🖨️</div>
+                    <h4>Printer</h4>
+                    <p>I have a 3D printer and want to provide printing services</p>
+                  </div>
+                  <div 
+                    className={`user-type-card ${userType === 'customer' ? 'selected' : ''}`}
+                    onClick={() => setUserType('customer')}
+                  >
+                    <div className="user-type-icon">👤</div>
+                    <h4>Customer</h4>
+                    <p>I want to get something 3D printed</p>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
           
           <div className="form-group">
@@ -303,6 +332,7 @@ function Login() {
               setEmail('');
               setPassword('');
               setDisplayName('');
+              setUserType('');
             }}
           >
             {showSignup ? 'Sign In' : 'Sign Up'}
