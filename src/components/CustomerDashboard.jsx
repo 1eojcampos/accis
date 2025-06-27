@@ -1,11 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 
+const popularModels = [
+  { id: 1, name: 'Phone Stand', category: 'Gadgets', image: '/assets/phone-stand.jpg' },
+  { id: 2, name: 'Vase', category: 'Home', image: '/assets/vase.jpg' },
+  { id: 3, name: 'Chess Set', category: 'Toys', image: '/assets/chess.jpg' },
+  { id: 4, name: 'Keychain', category: 'Accessories', image: '/assets/keychain.jpg' },
+  // Add more models as needed
+];
+
+const categories = ['All', 'Gadgets', 'Home', 'Toys', 'Accessories'];
+
+// Example order history data
+const orderHistory = [
+  {
+    id: 'ORD-001',
+    model: 'Phone Stand',
+    printer: '3DPrints Inc.',
+    status: 'Completed',
+    date: '2024-06-01',
+    price: '$12.00'
+  },
+  {
+    id: 'ORD-002',
+    model: 'Vase',
+    printer: 'HomeMakers 3D',
+    status: 'In Progress',
+    date: '2024-06-15',
+    price: '$18.00'
+  },
+  // Add more orders as needed
+];
+
 function CustomerDashboard() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [filter, setFilter] = useState('All');
+  const [uploadedModel, setUploadedModel] = useState(null);
 
   const handleLogout = async () => {
     try {
@@ -15,6 +48,18 @@ function CustomerDashboard() {
       console.error('Failed to log out:', error);
     }
   };
+
+  const handleModelUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedModel(file.name);
+      // You can add upload logic here (e.g., Supabase storage)
+    }
+  };
+
+  const filteredModels = filter === 'All'
+    ? popularModels
+    : popularModels.filter(model => model.category === filter);
 
   return (
     <div className="dashboard-container">
@@ -27,100 +72,79 @@ function CustomerDashboard() {
           </button>
         </div>
       </div>
-      
+
       <div className="dashboard-content customer-dashboard">
         <div className="dashboard-card">
-          <h2>👤 Your 3D Printing Projects</h2>
-          <p>Find the perfect printer for your project and track your orders</p>
-          
-          <div className="stats-grid">
-            <div className="stat-card">
-              <h3>0</h3>
-              <p>Active Orders</p>
-            </div>
-            <div className="stat-card">
-              <h3>0</h3>
-              <p>Completed Projects</p>
-            </div>
-            <div className="stat-card">
-              <h3>0</h3>
-              <p>Saved Printers</p>
-            </div>
-            <div className="stat-card">
-              <h3>$0</h3>
-              <p>Total Spent</p>
-            </div>
+          <h2>Popular Models</h2>
+          <div className="filter-bar">
+            <label>Filter by category:</label>
+            <select value={filter} onChange={e => setFilter(e.target.value)}>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+          <div className="models-grid">
+            {filteredModels.map(model => (
+              <div className="model-card" key={model.id}>
+                <img src={model.image} alt={model.name} className="model-image" />
+                <h3>{model.name}</h3>
+                <span className="model-category">{model.category}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="dashboard-card">
-          <h2>Quick Actions</h2>
-          <div className="action-buttons">
-            <button className="action-button primary">
-              🔍 Find Printers
-            </button>
-            <button className="action-button">
-              📁 Upload 3D Model
-            </button>
-            <button className="action-button">
-              📦 Track Orders
-            </button>
-            <button className="action-button">
-              ⭐ Leave Reviews
-            </button>
-          </div>
+          <h2>Upload Your Own Model</h2>
+          <input
+            type="file"
+            accept=".stl,.obj"
+            onChange={handleModelUpload}
+          />
+          {uploadedModel && (
+            <p>Uploaded: <strong>{uploadedModel}</strong></p>
+          )}
         </div>
 
         <div className="dashboard-card">
-          <h2>Featured Printers</h2>
-          <div className="printer-grid">
-            <div className="printer-card">
-              <div className="printer-avatar">🖨️</div>
-              <h4>TechPrint Pro</h4>
-              <div className="printer-rating">⭐⭐⭐⭐⭐ 4.9</div>
-              <p>High-quality PLA & ABS printing</p>
-              <span className="printer-price">From $0.15/g</span>
-            </div>
-            <div className="printer-card">
-              <div className="printer-avatar">🎨</div>
-              <h4>Creative Prints</h4>
-              <div className="printer-rating">⭐⭐⭐⭐⭐ 4.8</div>
-              <p>Specialized in artistic prints</p>
-              <span className="printer-price">From $0.18/g</span>
-            </div>
-            <div className="printer-card">
-              <div className="printer-avatar">⚡</div>
-              <h4>Fast Print Express</h4>
-              <div className="printer-rating">⭐⭐⭐⭐☆ 4.7</div>
-              <p>24-hour turnaround time</p>
-              <span className="printer-price">From $0.20/g</span>
-            </div>
-          </div>
+          <h2>Find a Printer</h2>
+          <button className="action-button primary" onClick={() => navigate('/printers')}>
+            🔍 Browse 3D Printers
+          </button>
         </div>
 
         <div className="dashboard-card">
-          <h2>How It Works</h2>
-          <div className="steps-grid">
-            <div className="step-card">
-              <div className="step-number">1</div>
-              <h4>Upload Your Model</h4>
-              <p>Upload your 3D model file (.STL, .OBJ, etc.)</p>
-            </div>
-            <div className="step-card">
-              <div className="step-number">2</div>
-              <h4>Choose a Printer</h4>
-              <p>Browse printers by location, price, and reviews</p>
-            </div>
-            <div className="step-card">
-              <div className="step-number">3</div>
-              <h4>Place Your Order</h4>
-              <p>Select materials, quantity, and delivery options</p>
-            </div>
-            <div className="step-card">
-              <div className="step-number">4</div>
-              <h4>Receive Your Print</h4>
-              <p>Track progress and receive your finished product</p>
-            </div>
+          <h2>Order History</h2>
+          <div className="order-history-list">
+            {orderHistory.length === 0 ? (
+              <p>No orders yet.</p>
+            ) : (
+              <table className="order-history-table">
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Model</th>
+                    <th>Printer</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderHistory.map(order => (
+                    <tr key={order.id}>
+                      <td>{order.id}</td>
+                      <td>{order.model}</td>
+                      <td>{order.printer}</td>
+                      <td>{order.status}</td>
+                      <td>{order.date}</td>
+                      <td>{order.price}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
