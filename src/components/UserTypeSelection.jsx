@@ -33,7 +33,7 @@ function UserTypeSelection() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h2>Welcome to 3D Print Connect!</h2>
+        <h2>Welcome to Accis!</h2>
         <p className="auth-subtitle">
           Tell us more about yourself to get started
         </p>
