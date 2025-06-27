@@ -77,7 +77,7 @@ function PrinterDashboard() {
             <div className="activity-item">
               <div className="activity-icon">🎉</div>
               <div className="activity-content">
-                <p><strong>Welcome to 3D Print Connect!</strong></p>
+                <p><strong>Welcome to Accis!</strong></p>
                 <p>Complete your profile setup to start receiving orders</p>
                 <span className="activity-time">Just now</span>
               </div>
