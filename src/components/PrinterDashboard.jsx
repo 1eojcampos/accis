@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import PrinterManagement from './PrinterManagement';
+import PrintRequests from './PrintRequests';
 import './Dashboard.css';
 
 function PrinterDashboard() {
@@ -51,17 +53,23 @@ function PrinterDashboard() {
       <div className="dashboard-card">
         <h2>Quick Actions</h2>
         <div className="action-buttons">
-          <button className="action-button primary">
-            📝 Create Service Listing
+          <button 
+            className="action-button primary"
+            onClick={() => setActiveTab('printers')}
+          >
+            🖨️ Manage Printers
+          </button>
+          <button 
+            className="action-button"
+            onClick={() => setActiveTab('requests')}
+          >
+            📦 Print Requests
           </button>
           <button className="action-button">
-            📦 Manage Orders
+            ⚙️ Settings
           </button>
           <button className="action-button">
-            ⚙️ Printer Settings
-          </button>
-          <button className="action-button">
-            💰 View Earnings
+            💰 Earnings
           </button>
         </div>
       </div>
@@ -215,6 +223,26 @@ function PrinterDashboard() {
             <span className="nav-label">Home</span>
           </button>
           <button 
+            className={`sidebar-nav-item ${activeTab === 'printers' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('printers');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="nav-icon">🖨️</div>
+            <span className="nav-label">My Printers</span>
+          </button>
+          <button 
+            className={`sidebar-nav-item ${activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('requests');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="nav-icon">📦</div>
+            <span className="nav-label">Print Requests</span>
+          </button>
+          <button 
             className={`sidebar-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('profile');
@@ -245,14 +273,22 @@ function PrinterDashboard() {
             <div className="hamburger-line"></div>
             <div className="hamburger-line"></div>
           </button>
-          <h1>{activeTab === 'home' ? 'Printer Dashboard' : 'Profile'}</h1>
+          <h1>
+            {activeTab === 'home' && 'Printer Dashboard'}
+            {activeTab === 'printers' && 'My Printers'}
+            {activeTab === 'requests' && 'Print Requests'}
+            {activeTab === 'profile' && 'Profile'}
+          </h1>
           <div className="header-actions">
             <span className="user-greeting">Welcome, {currentUser?.displayName || 'Printer'}!</span>
           </div>
         </div>
         
         <div className="dashboard-content printer-dashboard">
-          {activeTab === 'home' ? renderHomeContent() : renderProfileContent()}
+          {activeTab === 'home' && renderHomeContent()}
+          {activeTab === 'printers' && <PrinterManagement />}
+          {activeTab === 'requests' && <PrintRequests />}
+          {activeTab === 'profile' && renderProfileContent()}
         </div>
       </div>
     </div>

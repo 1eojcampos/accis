@@ -6,10 +6,27 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // For development - allow authenticated users to read/write
-    // TODO: Secure these rules for production
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Printer listings
+    match /printers/{printerId} {
+      // Anyone can read active printer listings
+      allow read: if request.auth != null && resource.data.isActive == true;
+      // Only the owner can create, update, or delete their printer listings
+      allow create, update, delete: if request.auth != null && 
+        (request.auth.uid == resource.data.ownerId || request.auth.uid == request.data.ownerId);
+    }
+    
+    // Print requests
+    match /printRequests/{requestId} {
+      // Allow customers to read their own requests and printer owners to read requests for their printers
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.customerId || request.auth.uid == resource.data.printerOwnerId);
+      // Allow customers to create requests
+      allow create: if request.auth != null && request.auth.uid == request.data.customerId;
+      // Allow printer owners to update request status
+      allow update: if request.auth != null && request.auth.uid == resource.data.printerOwnerId;
+      // Allow customers to delete their own pending requests
+      allow delete: if request.auth != null && request.auth.uid == resource.data.customerId && 
+        resource.data.status == 'pending';
     }
   }
 }
