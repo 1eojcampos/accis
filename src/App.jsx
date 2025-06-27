@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
+import CustomerDashboard from './components/CustomerDashboard';
 import './App.css';
 
 function App() {
@@ -20,6 +21,14 @@ function App() {
                   <Dashboard />
                 </PrivateRoute>
               } 
+            />
+            <Route
+              path="/customer-dashboard"
+              element={
+                <PrivateRoute>
+                  <CustomerDashboard />
+                </PrivateRoute>
+              }
             />
             <Route path="/" element={<Navigate to="/login" />} />
           </Routes>
