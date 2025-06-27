@@ -45,26 +45,31 @@ function MyRequests() {
     };
   }, [currentUser]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending': return '#ffa500';
-      case 'approved': return '#28a745';
-      case 'rejected': return '#dc3545';
-      case 'in-progress': return '#17a2b8';
-      case 'completed': return '#6f42c1';
-      default: return '#6c757d';
-    }
+  const getProgressSteps = (status) => {
+    const allSteps = [
+      { id: 'submitted', icon: '📝', label: 'Submitted', alwaysShow: true },
+      { id: 'decision', icon: status === 'rejected' ? '❌' : '✅', label: status === 'rejected' ? 'Rejected' : 'Approved', alwaysShow: true },
+      { id: 'printing', icon: '🖨️', label: 'Printing', showIf: status !== 'rejected' },
+      { id: 'completed', icon: '🎉', label: 'Completed', showIf: status !== 'rejected' }
+    ];
+
+    return allSteps.filter(step => step.alwaysShow || step.showIf);
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'pending': return '⏳';
-      case 'approved': return '✅';
-      case 'rejected': return '❌';
-      case 'in-progress': return '🖨️';
-      case 'completed': return '🎉';
-      default: return '❓';
+  const getStepStatus = (stepId, requestStatus) => {
+    const statusOrder = ['pending', 'approved', 'in-progress', 'completed'];
+    const stepOrder = ['submitted', 'decision', 'printing', 'completed'];
+    
+    if (requestStatus === 'rejected') {
+      if (stepId === 'submitted' || stepId === 'decision') return 'active';
+      return 'inactive';
     }
+    
+    const currentStatusIndex = statusOrder.indexOf(requestStatus);
+    const stepIndex = stepOrder.indexOf(stepId);
+    
+    if (stepIndex <= currentStatusIndex) return 'active';
+    return 'inactive';
   };
 
   const formatDate = (timestamp) => {
@@ -84,7 +89,7 @@ function MyRequests() {
 
       <div className="requests-list">
         {requests.map(request => (
-          <div key={request.id} className="request-card">
+          <div key={request.id} className="request-card" data-status={request.status}>
             <div className="request-header">
               <div className="request-info">
                 <h3>{request.fileName || 'Print Request'}</h3>
@@ -94,9 +99,19 @@ function MyRequests() {
               <div className="request-status">
                 <span 
                   className="status-badge"
-                  style={{ backgroundColor: getStatusColor(request.status) }}
+                  style={{ backgroundColor: 
+                    request.status === 'pending' ? '#ffa500' :
+                    request.status === 'approved' ? '#28a745' :
+                    request.status === 'rejected' ? '#dc3545' :
+                    request.status === 'in-progress' ? '#17a2b8' :
+                    request.status === 'completed' ? '#6f42c1' : '#6c757d'
+                  }}
                 >
-                  {getStatusIcon(request.status)} {request.status?.toUpperCase()}
+                  {request.status === 'pending' ? '⏳' :
+                   request.status === 'approved' ? '✅' :
+                   request.status === 'rejected' ? '❌' :
+                   request.status === 'in-progress' ? '🖨️' :
+                   request.status === 'completed' ? '🎉' : '❓'} {request.status?.toUpperCase()}
                 </span>
               </div>
             </div>
@@ -139,26 +154,50 @@ function MyRequests() {
             </div>
 
             <div className="request-progress">
+              <h4>Request Progress</h4>
               <div className="progress-steps">
-                <div className={`progress-step ${['pending', 'approved', 'rejected', 'in-progress', 'completed'].includes(request.status) ? 'active' : ''}`}>
-                  <div className="step-icon">📝</div>
-                  <div className="step-label">Submitted</div>
-                </div>
-                <div className={`progress-step ${['approved', 'in-progress', 'completed'].includes(request.status) ? 'active' : request.status === 'rejected' ? 'rejected' : ''}`}>
-                  <div className="step-icon">{request.status === 'rejected' ? '❌' : '✅'}</div>
-                  <div className="step-label">{request.status === 'rejected' ? 'Rejected' : 'Approved'}</div>
-                </div>
-                {request.status !== 'rejected' && (
-                  <>
-                    <div className={`progress-step ${['in-progress', 'completed'].includes(request.status) ? 'active' : ''}`}>
-                      <div className="step-icon">🖨️</div>
-                      <div className="step-label">Printing</div>
+                {getProgressSteps(request.status).map((step, index) => {
+                  const stepStatus = getStepStatus(step.id, request.status);
+                  const isRejected = request.status === 'rejected' && step.id === 'decision';
+                  
+                  return (
+                    <div 
+                      key={step.id} 
+                      className={`progress-step ${stepStatus === 'active' ? 'active' : ''} ${isRejected ? 'rejected' : ''}`}
+                    >
+                      <div className="step-icon">{step.icon}</div>
+                      <div className="step-label">{step.label}</div>
                     </div>
-                    <div className={`progress-step ${request.status === 'completed' ? 'active' : ''}`}>
-                      <div className="step-icon">🎉</div>
-                      <div className="step-label">Completed</div>
-                    </div>
-                  </>
+                  );
+                })}
+              </div>
+              
+              {/* Status message for current step */}
+              <div className={`current-status ${request.status}`}>
+                {request.status === 'pending' && (
+                  <p className="status-description">
+                    🕐 Your request is pending review. The printer will approve or reject it soon.
+                  </p>
+                )}
+                {request.status === 'approved' && (
+                  <p className="status-description">
+                    ✅ Great! Your request has been approved and will start printing soon.
+                  </p>
+                )}
+                {request.status === 'rejected' && (
+                  <p className="status-description">
+                    ❌ Unfortunately, your request was rejected. {request.notes && `Reason: ${request.notes}`}
+                  </p>
+                )}
+                {request.status === 'in-progress' && (
+                  <p className="status-description">
+                    🖨️ Your model is currently being printed! This may take some time.
+                  </p>
+                )}
+                {request.status === 'completed' && (
+                  <p className="status-description">
+                    🎉 Congratulations! Your print has been completed successfully. {request.notes && `Notes: ${request.notes}`}
+                  </p>
                 )}
               </div>
             </div>
