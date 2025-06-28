@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { subscribeToCustomerRequests, getUserProfile, submitReview } from '../services/firestore';
+import { subscribeToCustomerRequests, getUserProfile } from '../services/firestore';
 import './Dashboard.css';
 
 function MyRequests() {
@@ -8,13 +8,6 @@ function MyRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [unsubscribe, setUnsubscribe] = useState(null);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null);
-  const [reviewData, setReviewData] = useState({
-    rating: 0,
-    comment: ''
-  });
-  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -82,51 +75,6 @@ function MyRequests() {
   const formatDate = (timestamp) => {
     if (!timestamp || !timestamp.toDate) return 'Unknown';
     return timestamp.toDate().toLocaleDateString() + ' ' + timestamp.toDate().toLocaleTimeString();
-  };
-
-  const handleConfirmReceipt = (request) => {
-    setSelectedRequest(request);
-    setShowReviewModal(true);
-    setReviewData({ rating: 0, comment: '' });
-  };
-
-  const handleSubmitReview = async () => {
-    if (reviewData.rating === 0) {
-      alert('Please select a rating');
-      return;
-    }
-
-    setSubmittingReview(true);
-    try {
-      await submitReview({
-        requestId: selectedRequest.id,
-        printerId: selectedRequest.printerOwnerId,
-        customerId: currentUser.uid,
-        customerName: currentUser.displayName || currentUser.email,
-        rating: reviewData.rating,
-        comment: reviewData.comment,
-        fileName: selectedRequest.fileName,
-        createdAt: new Date()
-      });
-
-      // Close modal and reset state
-      setShowReviewModal(false);
-      setSelectedRequest(null);
-      setReviewData({ rating: 0, comment: '' });
-      
-      alert('Thank you for your review!');
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      alert('Error submitting review. Please try again.');
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
-  const closeReviewModal = () => {
-    setShowReviewModal(false);
-    setSelectedRequest(null);
-    setReviewData({ rating: 0, comment: '' });
   };
 
   if (loading) {
@@ -246,22 +194,9 @@ function MyRequests() {
                     🖨️ Your model is currently being printed! This may take some time.
                   </p>
                 )}
-                {request.status === 'completed' && !request.reviewSubmitted && (
-                  <div className="completion-actions">
-                    <p className="status-description">
-                      🎉 Congratulations! Your print has been completed successfully. {request.notes && `Notes: ${request.notes}`}
-                    </p>
-                    <button 
-                      className="confirm-receipt-btn"
-                      onClick={() => handleConfirmReceipt(request)}
-                    >
-                      ✅ Confirm Receipt & Leave Review
-                    </button>
-                  </div>
-                )}
-                {request.status === 'completed' && request.reviewSubmitted && (
+                {request.status === 'completed' && (
                   <p className="status-description">
-                    🎉 Print completed and review submitted. Thank you for your feedback!
+                    🎉 Congratulations! Your print has been completed successfully. {request.notes && `Notes: ${request.notes}`}
                   </p>
                 )}
               </div>
@@ -274,66 +209,6 @@ function MyRequests() {
         <div className="empty-state">
           <h3>No print requests yet</h3>
           <p>Your print requests will appear here once you start sending them to printers.</p>
-        </div>
-      )}
-
-      {/* Review Modal */}
-      {showReviewModal && (
-        <div className="modal-overlay">
-          <div className="review-modal">
-            <div className="modal-header">
-              <h3>Review Your Print</h3>
-              <button className="close-btn" onClick={closeReviewModal}>×</button>
-            </div>
-            
-            <div className="modal-content">
-              <p><strong>File:</strong> {selectedRequest?.fileName}</p>
-              <p><strong>Printer:</strong> {selectedRequest?.printerOwnerName}</p>
-              
-              <div className="rating-section">
-                <label>Rating (Required):</label>
-                <div className="star-rating">
-                  {[1, 2, 3, 4, 5].map(star => (
-                    <button
-                      key={star}
-                      type="button"
-                      className={`star ${reviewData.rating >= star ? 'active' : ''}`}
-                      onClick={() => setReviewData(prev => ({ ...prev, rating: star }))}
-                    >
-                      ★
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="comment-section">
-                <label>Comment (Optional):</label>
-                <textarea
-                  value={reviewData.comment}
-                  onChange={(e) => setReviewData(prev => ({ ...prev, comment: e.target.value }))}
-                  placeholder="Share your experience with this print..."
-                  rows="4"
-                />
-              </div>
-            </div>
-
-            <div className="modal-actions">
-              <button 
-                className="cancel-btn" 
-                onClick={closeReviewModal}
-                disabled={submittingReview}
-              >
-                Cancel
-              </button>
-              <button 
-                className="submit-btn" 
-                onClick={handleSubmitReview}
-                disabled={submittingReview || reviewData.rating === 0}
-              >
-                {submittingReview ? 'Submitting...' : 'Submit Review'}
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -2158,23 +2158,162 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* Responsive design for print request modal */
-@media (max-width: 768px) {
-  .print-request-modal {
-    max-width: 95%;
-    margin: 20px;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .modal-actions {
-    flex-direction: column;
-  }
-  
-  .cancel-button,
-  .submit-button {
-    width: 100%;
-  }
+/* Review Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.review-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.modal-content {
+  padding: 20px;
+}
+
+.modal-content p {
+  margin: 0 0 15px 0;
+  color: #666;
+}
+
+.rating-section, .comment-section {
+  margin-bottom: 20px;
+}
+
+.rating-section label, .comment-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+}
+
+.star-rating {
+  display: flex;
+  gap: 5px;
+}
+
+.star {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #ddd;
+  transition: color 0.2s;
+}
+
+.star:hover,
+.star.active {
+  color: #ffc107;
+}
+
+.comment-section textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #eee;
+}
+
+.cancel-btn, .submit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cancel-btn {
+  background: #f8f9fa;
+  color: #666;
+}
+
+.cancel-btn:hover {
+  background: #e9ecef;
+}
+
+.submit-btn {
+  background: #007bff;
+  color: white;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.confirm-receipt-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.confirm-receipt-btn:hover {
+  background: #218838;
+}
+
+.completion-actions {
+  text-align: center;
 }

@@ -214,33 +214,6 @@ function CustomerDashboard() {
       </div>
 
       <div className="dashboard-card">
-        <h2>🎯 Printing Preferences</h2>
-        <div className="printer-info">
-          <div className="info-row">
-            <label>Preferred Materials</label>
-            <div className="material-checkboxes">
-              <label><input type="checkbox" /> PLA</label>
-              <label><input type="checkbox" /> ABS</label>
-              <label><input type="checkbox" /> PETG</label>
-              <label><input type="checkbox" /> TPU</label>
-            </div>
-          </div>
-          <div className="info-row">
-            <label>Quality Preference</label>
-            <select style={{padding: '12px', border: '1px solid #e1e5e9', borderRadius: '8px'}}>
-              <option>Standard Quality</option>
-              <option>High Quality</option>
-              <option>Ultra High Quality</option>
-            </select>
-          </div>
-          <div className="info-row">
-            <label>Budget Range</label>
-            <input type="text" placeholder="e.g., $10-50 per project" />
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-card">
         <h2>⚙️ Account Settings</h2>
         <div className="settings-options">
           <button className="settings-button">

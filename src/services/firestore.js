@@ -204,3 +204,64 @@ export const getUserProfile = async (userId) => {
     throw error;
   }
 };
+
+// Reviews
+export const submitReview = async (reviewData) => {
+  try {
+    const reviewsRef = collection(db, 'reviews');
+    const reviewDoc = await addDoc(reviewsRef, {
+      ...reviewData,
+      createdAt: serverTimestamp()
+    });
+
+    // Mark the request as reviewed
+    const requestRef = doc(db, 'printRequests', reviewData.requestId);
+    await updateDoc(requestRef, {
+      reviewSubmitted: true,
+      reviewId: reviewDoc.id
+    });
+
+    return reviewDoc.id;
+  } catch (error) {
+    console.error('Error submitting review:', error);
+    throw error;
+  }
+};
+
+export const getPrinterReviews = async (printerId) => {
+  try {
+    const reviewsRef = collection(db, 'reviews');
+    const q = query(
+      reviewsRef,
+      where('printerId', '==', printerId),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error fetching printer reviews:', error);
+    throw error;
+  }
+};
+
+export const getPrinterAverageRating = async (printerId) => {
+  try {
+    const reviews = await getPrinterReviews(printerId);
+    if (reviews.length === 0) return { average: 0, count: 0 };
+    
+    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
+    const average = sum / reviews.length;
+    
+    return {
+      average: Math.round(average * 10) / 10, // Round to 1 decimal
+      count: reviews.length
+    };
+  } catch (error) {
+    console.error('Error calculating average rating:', error);
+    return { average: 0, count: 0 };
+  }
+};
