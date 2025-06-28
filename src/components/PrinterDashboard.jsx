@@ -73,42 +73,6 @@ function PrinterDashboard() {
           </button>
         </div>
       </div>
-
-      <div className="dashboard-card">
-        <h2>Recent Activity</h2>
-        <div className="activity-list">
-          <div className="activity-item">
-            <div className="activity-icon">🎉</div>
-            <div className="activity-content">
-              <p><strong>Welcome to Accis!</strong></p>
-              <p>Complete your profile setup to start receiving orders</p>
-              <span className="activity-time">Just now</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-card">
-        <h2>Getting Started</h2>
-        <div className="checklist">
-          <div className="checklist-item">
-            <input type="checkbox" id="profile" />
-            <label htmlFor="profile">Complete your profile</label>
-          </div>
-          <div className="checklist-item">
-            <input type="checkbox" id="printer" />
-            <label htmlFor="printer">Add your 3D printer details</label>
-          </div>
-          <div className="checklist-item">
-            <input type="checkbox" id="services" />
-            <label htmlFor="services">Create your first service listing</label>
-          </div>
-          <div className="checklist-item">
-            <input type="checkbox" id="photos" />
-            <label htmlFor="photos">Upload photos of your work</label>
-          </div>
-        </div>
-      </div>
     </>
   );
 
@@ -147,33 +111,6 @@ function PrinterDashboard() {
               <label>Bio</label>
               <textarea placeholder="Tell customers about your 3D printing services..." rows="3"></textarea>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="dashboard-card">
-        <h2>🖨️ Printer Information</h2>
-        <div className="printer-info">
-          <div className="info-row">
-            <label>Printer Model</label>
-            <input type="text" placeholder="e.g., Ender 3 Pro" />
-          </div>
-          <div className="info-row">
-            <label>Available Materials</label>
-            <div className="material-checkboxes">
-              <label><input type="checkbox" /> PLA</label>
-              <label><input type="checkbox" /> ABS</label>
-              <label><input type="checkbox" /> PETG</label>
-              <label><input type="checkbox" /> TPU</label>
-            </div>
-          </div>
-          <div className="info-row">
-            <label>Print Bed Size</label>
-            <input type="text" placeholder="e.g., 220x220x250mm" />
-          </div>
-          <div className="info-row">
-            <label>Price per gram</label>
-            <input type="number" placeholder="0.15" step="0.01" />
           </div>
         </div>
       </div>
