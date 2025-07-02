@@ -2314,6 +2314,364 @@
   background: #218838;
 }
 
-.completion-actions {
+/* Public Models Search Links Component Styles */
+.public-models-container {
+  width: 100%;
+}
+
+/* Search Form Styles */
+.search-form {
+  margin-bottom: 24px;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 0;
+  margin-bottom: 12px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 16px 20px;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px 0 0 12px;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #667eea;
+}
+
+.search-button {
+  padding: 16px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 0 12px 12px 0;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.search-button:hover {
+  background: #5a6fd8;
+}
+
+.clear-button {
+  padding: 8px 16px;
+  background: #f8f9fa;
+  color: #666;
+  border: 2px solid #e1e5e9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.clear-button:hover {
+  background: #e9ecef;
+  border-color: #ccc;
+}
+
+/* Quick Search Preview */
+.quick-search-preview {
   text-align: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f1f3ff 100%);
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+}
+
+.quick-search-preview p {
+  color: #666;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* Copy Feedback */
+.copy-feedback {
+  background: #d4edda;
+  color: #155724;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #28a745;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Marketplace Links Section */
+.marketplace-links {
+  margin-top: 32px;
+}
+
+.marketplace-links h3 {
+  color: #333;
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.links-description {
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Marketplace Grid */
+.marketplace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.marketplace-card {
+  background: white;
+  border: 2px solid #e1e5e9;
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.marketplace-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.1);
+}
+
+.marketplace-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.marketplace-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9ff;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.marketplace-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.marketplace-name {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.marketplace-description {
+  margin: 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.marketplace-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.marketplace-actions .action-button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.marketplace-actions .action-button.primary {
+  background: #667eea;
+  color: white;
+}
+
+.marketplace-actions .action-button.primary:hover {
+  background: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.marketplace-actions .action-button.secondary {
+  background: #f8f9fa;
+  color: #666;
+  border: 2px solid #e1e5e9;
+}
+
+.marketplace-actions .action-button.secondary:hover {
+  background: #e9ecef;
+  border-color: #ccc;
+}
+
+.marketplace-url {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e1e5e9;
+}
+
+.marketplace-url code {
+  font-size: 11px;
+  color: #555;
+  word-break: break-all;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Instructions Section */
+.instructions-section {
+  margin-top: 40px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f1f3ff 100%);
+  border-radius: 16px;
+  border-left: 4px solid #667eea;
+}
+
+.instructions-section h3 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.instruction-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.step-number {
+  width: 28px;
+  height: 28px;
+  background: #667eea;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.step-content h4 {
+  margin: 0 0 4px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.step-content p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Popular Searches */
+.popular-searches {
+  margin-top: 32px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.popular-searches h3 {
+  margin: 0 0 16px 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-tag {
+  padding: 6px 12px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #e1e5e9;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-tag:hover {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+  transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .search-input-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-input {
+    border-radius: 12px;
+  }
+  
+  .search-button {
+    border-radius: 12px;
+  }
+  
+  .marketplace-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .instructions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .marketplace-actions {
+    flex-direction: column;
+  }
+  
+  .search-tags {
+    justify-content: center;
+  }
 }

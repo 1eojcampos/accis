@@ -1,19 +1,11 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import PrinterBrowser from './PrinterBrowser';
 import MyRequests from './MyRequests';
+import PublicModels from './PublicModels';
 import './Dashboard.css';
-
-const popularModels = [
-  { id: 1, name: 'Phone Stand', category: 'Gadgets', image: '/assets/phone-stand.jpg' },
-  { id: 2, name: 'Vase', category: 'Home', image: '/assets/vase.jpg' },
-  { id: 3, name: 'Chess Set', category: 'Toys', image: '/assets/chess.jpg' },
-  { id: 4, name: 'Keychain', category: 'Accessories', image: '/assets/keychain.jpg' },
-  // Add more models as needed
-];
-
-const categories = ['All', 'Gadgets', 'Home', 'Toys', 'Accessories'];
 
 // Example order history data
 const orderHistory = [
@@ -41,12 +33,11 @@ function CustomerDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [uploadedModel, setUploadedModel] = useState(null);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-  const [filter, setFilter] = useState('All');
-  const [uploadedModel, setUploadedModel] = useState(null);
 
   const handleLogout = async () => {
     try {
@@ -64,10 +55,6 @@ function CustomerDashboard() {
       // You can add upload logic here (e.g., Supabase storage)
     }
   };
-
-  const filteredModels = filter === 'All'
-    ? popularModels
-    : popularModels.filter(model => model.category === filter);
 
   const renderHomeContent = () => (
     <>
@@ -96,23 +83,17 @@ function CustomerDashboard() {
       </div>
 
       <div className="dashboard-card">
-        <h2>Popular Models</h2>
-        <div className="filter-bar">
-          <label>Filter by category:</label>
-          <select value={filter} onChange={e => setFilter(e.target.value)}>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-        <div className="models-grid">
-          {filteredModels.map(model => (
-            <div className="model-card" key={model.id}>
-              <img src={model.image} alt={model.name} className="model-image" />
-              <h3>{model.name}</h3>
-              <span className="model-category">{model.category}</span>
-            </div>
-          ))}
+        <h2>🌐 Browse Public Models</h2>
+        <p>Discover 3D models from popular marketplaces like Yeggi, Thingiverse, and more</p>
+        
+        <div className="quick-search-preview">
+          <p>Generate instant search links for multiple 3D model websites</p>
+          <button 
+            className="action-button primary" 
+            onClick={() => setActiveTab('models')}
+          >
+            🔗 Browse Public Models
+          </button>
         </div>
       </div>
 
@@ -271,6 +252,16 @@ function CustomerDashboard() {
             <span className="nav-label">Find Printers</span>
           </button>
           <button 
+            className={`sidebar-nav-item ${activeTab === 'models' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveTab('models');
+              setSidebarOpen(false);
+            }}
+          >
+            <div className="nav-icon">🌐</div>
+            <span className="nav-label">Public Models</span>
+          </button>
+          <button 
             className={`sidebar-nav-item ${activeTab === 'requests' ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('requests');
@@ -314,6 +305,7 @@ function CustomerDashboard() {
           <h1>
             {activeTab === 'home' && 'Customer Dashboard'}
             {activeTab === 'browse' && 'Find Printers'}
+            {activeTab === 'models' && 'Browse Public Models'}
             {activeTab === 'requests' && 'My Requests'}
             {activeTab === 'profile' && 'Profile'}
           </h1>
@@ -325,6 +317,7 @@ function CustomerDashboard() {
         <div className="dashboard-content customer-dashboard">
           {activeTab === 'home' && renderHomeContent()}
           {activeTab === 'browse' && <PrinterBrowser />}
+          {activeTab === 'models' && <PublicModels />}
           {activeTab === 'requests' && <MyRequests />}
           {activeTab === 'profile' && renderProfileContent()}
         </div>
