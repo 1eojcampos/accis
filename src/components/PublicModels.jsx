@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import NavigationHeader from './NavigationHeader';
+import SubmitPrintRequest from './SubmitPrintRequest';
 import './Dashboard.css';
 
-const PublicModels = () => {
+const PublicModels = ({ onBack }) => {
   const { currentUser } = useAuth();
   const [query, setQuery] = useState('');
   const [links, setLinks] = useState([]);
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [showSubmitRequest, setShowSubmitRequest] = useState(false);
+  const [selectedUrl, setSelectedUrl] = useState('');
 
   const marketplaces = [
     { 
@@ -87,8 +91,49 @@ const PublicModels = () => {
     setCopyFeedback('');
   };
 
+  const handleRequestPrint = (url) => {
+    setSelectedUrl(url);
+    setShowSubmitRequest(true);
+  };
+
+  const handleBackFromSubmit = () => {
+    setShowSubmitRequest(false);
+    setSelectedUrl('');
+  };
+
+  const handleSubmitSuccess = (requestId) => {
+    alert(`Print request submitted successfully! Request ID: ${requestId}\n\nPrinters will be able to see your request and provide quotes.`);
+    setShowSubmitRequest(false);
+    setSelectedUrl('');
+  };
+
+  if (showSubmitRequest) {
+    return (
+      <SubmitPrintRequest 
+        onBack={handleBackFromSubmit}
+        onSuccess={handleSubmitSuccess}
+        initialUrl={selectedUrl}
+      />
+    );
+  }
+
   return (
     <div className="public-models-container">
+      <NavigationHeader
+        title="Browse Public 3D Models"
+        subtitle="Generate search links for popular 3D model marketplaces"
+        onBack={onBack}
+        showBackButton={!!onBack}
+        actions={[
+          {
+            label: 'Submit Custom Request',
+            icon: '📝',
+            type: 'primary',
+            onClick: () => setShowSubmitRequest(true)
+          }
+        ]}
+      />
+
       <div className="dashboard-card">
         <h2>🌐 Browse Public 3D Models</h2>
         <p>Generate search links for popular 3D model marketplaces. No scraping, no limits!</p>
@@ -162,6 +207,15 @@ const PublicModels = () => {
                     >
                       📋 Copy Link
                     </button>
+                    {currentUser && (
+                      <button
+                        onClick={() => handleRequestPrint(link.url)}
+                        className="action-button tertiary"
+                        title="Request print for models from this search"
+                      >
+                        📝 Request Print
+                      </button>
+                    )}
                   </div>
                   
                   <div className="marketplace-url">

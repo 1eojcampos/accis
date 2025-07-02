@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getAllPrinters, createPrintRequest, getUserProfile } from '../services/firestore';
+import NavigationHeader from './NavigationHeader';
 import './Dashboard.css';
 
-function PrinterBrowser() {
+function PrinterBrowser({ onBack }) {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const [printers, setPrinters] = useState([]);
@@ -163,15 +164,12 @@ function PrinterBrowser() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <button className="back-button" onClick={() => navigate(-1)}>
-          ← Back
-        </button>
-        <h1>Browse 3D Printers</h1>
-        <div className="header-actions">
-          <span className="user-greeting">Find the perfect printer for your project</span>
-        </div>
-      </div>
+      <NavigationHeader
+        title="Browse 3D Printers"
+        subtitle="Find the perfect printer for your project"
+        onBack={onBack}
+        showBackButton={!!onBack}
+      />
 
       <div className="printer-browser-content">
         {/* Filters Section */}

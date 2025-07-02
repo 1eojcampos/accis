@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { subscribeToCustomerRequests, getUserProfile, submitReview } from '../services/firestore';
+import NavigationHeader from './NavigationHeader';
 import './Dashboard.css';
 
-function MyRequests() {
+function MyRequests({ onBack }) {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -135,9 +136,10 @@ function MyRequests() {
 
   return (
     <div className="my-requests">
-      <div className="page-header">
-        <h1>My Print Requests</h1>
-      </div>
+      <NavigationHeader
+        title="My Print Requests"
+        onBack={onBack}
+      />
 
       <div className="requests-list">
         {requests.map(request => (

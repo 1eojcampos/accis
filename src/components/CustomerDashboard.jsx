@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getPrintRequestsForCustomer } from '../services/firestore';
 import PrinterBrowser from './PrinterBrowser';
 import MyRequests from './MyRequests';
 import PublicModels from './PublicModels';
+import SubmitPrintRequest from './SubmitPrintRequest';
 import './Dashboard.css';
 
 // Example order history data
@@ -34,9 +36,41 @@ function CustomerDashboard() {
   const [activeTab, setActiveTab] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [uploadedModel, setUploadedModel] = useState(null);
+  const [printRequests, setPrintRequests] = useState([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [showSubmitRequest, setShowSubmitRequest] = useState(false);
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
+  };
+
+  // Load user's print requests
+  useEffect(() => {
+    const loadPrintRequests = async () => {
+      if (currentUser) {
+        try {
+          setLoadingRequests(true);
+          const requests = await getPrintRequestsForCustomer(currentUser.uid);
+          setPrintRequests(requests);
+        } catch (error) {
+          console.error('Error loading print requests:', error);
+        } finally {
+          setLoadingRequests(false);
+        }
+      }
+    };
+
+    loadPrintRequests();
+  }, [currentUser]);
+
+  // Calculate stats from print requests
+  const stats = {
+    activeOrders: printRequests.filter(req => ['pending', 'accepted', 'in_progress'].includes(req.status)).length,
+    completedProjects: printRequests.filter(req => req.status === 'completed').length,
+    totalSpent: printRequests
+      .filter(req => req.status === 'completed' && req.finalPrice)
+      .reduce((sum, req) => sum + parseFloat(req.finalPrice.replace(/[^0-9.]/g, '') || 0), 0),
+    savedPrinters: 0 // This would come from a favorites/saved printers feature
   };
 
   const handleLogout = async () => {
@@ -63,60 +97,131 @@ function CustomerDashboard() {
         <p>Find the perfect printer for your project and track your orders</p>
         
         <div className="stats-grid">
-          <div className="stat-card">
-            <h3>0</h3>
+          <div className="stat-card active">
+            <h3>{loadingRequests ? '...' : stats.activeOrders}</h3>
             <p>Active Orders</p>
+            {stats.activeOrders > 0 && (
+              <button 
+                className="stat-action"
+                onClick={() => setActiveTab('requests')}
+              >
+                View →
+              </button>
+            )}
           </div>
           <div className="stat-card">
-            <h3>0</h3>
+            <h3>{loadingRequests ? '...' : stats.completedProjects}</h3>
             <p>Completed Projects</p>
           </div>
           <div className="stat-card">
-            <h3>0</h3>
+            <h3>{stats.savedPrinters}</h3>
             <p>Saved Printers</p>
           </div>
           <div className="stat-card">
-            <h3>$0</h3>
+            <h3>${stats.totalSpent.toFixed(2)}</h3>
             <p>Total Spent</p>
           </div>
         </div>
       </div>
 
+      {/* Recent Activity */}
+      {!loadingRequests && printRequests.length > 0 && (
+        <div className="dashboard-card">
+          <h2>📋 Recent Activity</h2>
+          <div className="recent-orders">
+            {printRequests.slice(0, 3).map(request => (
+              <div key={request.id} className="recent-order-item">
+                <div className="order-info">
+                  <h4>{request.modelTitle}</h4>
+                  <p className="order-meta">
+                    {request.quantity} × {request.material} • 
+                    <span className={`status ${request.status}`}>
+                      {request.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </p>
+                  {request.createdAt && (
+                    <p className="order-date">
+                      {new Date(request.createdAt.seconds * 1000).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                <div className="order-actions">
+                  <button 
+                    className="action-button small secondary"
+                    onClick={() => setActiveTab('requests')}
+                  >
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {printRequests.length > 3 && (
+            <button 
+              className="action-button secondary"
+              onClick={() => setActiveTab('requests')}
+            >
+              View All Requests ({printRequests.length})
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Quick Actions */}
       <div className="dashboard-card">
-        <h2>🌐 Browse Public Models</h2>
-        <p>Discover 3D models from popular marketplaces like Yeggi, Thingiverse, and more</p>
-        
-        <div className="quick-search-preview">
-          <p>Generate instant search links for multiple 3D model websites</p>
+        <h2>🚀 Quick Actions</h2>
+        <div className="quick-actions-grid">
           <button 
-            className="action-button primary" 
+            className="quick-action-card"
+            onClick={() => setShowSubmitRequest(true)}
+          >
+            <span className="quick-action-icon">📝</span>
+            <h3>Submit Print Request</h3>
+            <p>Submit a print request with a model link</p>
+          </button>
+          
+          <button 
+            className="quick-action-card"
             onClick={() => setActiveTab('models')}
           >
-            🔗 Browse Public Models
+            <span className="quick-action-icon">🌐</span>
+            <h3>Browse Models</h3>
+            <p>Find models from popular marketplaces</p>
           </button>
+          
+          <button 
+            className="quick-action-card"
+            onClick={() => setActiveTab('browse')}
+          >
+            <span className="quick-action-icon">🔍</span>
+            <h3>Find Printers</h3>
+            <p>Discover 3D printers in your area</p>
+          </button>
+          
+          <label className="quick-action-card upload-card">
+            <span className="quick-action-icon">📁</span>
+            <h3>Upload Model</h3>
+            <p>Upload your own STL or OBJ file</p>
+            <input
+              type="file"
+              accept=".stl,.obj"
+              onChange={handleModelUpload}
+              style={{ display: 'none' }}
+            />
+          </label>
         </div>
-      </div>
-
-      <div className="dashboard-card">
-        <h2>Upload Your Own Model</h2>
-        <input
-          type="file"
-          accept=".stl,.obj"
-          onChange={handleModelUpload}
-        />
+        
         {uploadedModel && (
-          <p>Uploaded: <strong>{uploadedModel}</strong></p>
+          <div className="upload-success">
+            <p>✅ Uploaded: <strong>{uploadedModel}</strong></p>
+            <button 
+              className="action-button primary small"
+              onClick={() => setShowSubmitRequest(true)}
+            >
+              Submit Print Request
+            </button>
+          </div>
         )}
-      </div>
-
-      <div className="dashboard-card">
-        <h2>Find a Printer</h2>
-        <button 
-          className="action-button primary" 
-          onClick={() => setActiveTab('browse')}
-        >
-          🔍 Browse 3D Printers
-        </button>
       </div>
 
       <div className="dashboard-card">
@@ -315,11 +420,26 @@ function CustomerDashboard() {
         </div>
         
         <div className="dashboard-content customer-dashboard">
-          {activeTab === 'home' && renderHomeContent()}
-          {activeTab === 'browse' && <PrinterBrowser />}
-          {activeTab === 'models' && <PublicModels />}
-          {activeTab === 'requests' && <MyRequests />}
-          {activeTab === 'profile' && renderProfileContent()}
+          {showSubmitRequest ? (
+            <SubmitPrintRequest 
+              onBack={() => setShowSubmitRequest(false)}
+              onSuccess={() => {
+                setShowSubmitRequest(false);
+                // Reload print requests to update stats
+                if (currentUser) {
+                  getPrintRequestsForCustomer(currentUser.uid).then(setPrintRequests);
+                }
+              }}
+            />
+          ) : (
+            <>
+              {activeTab === 'home' && renderHomeContent()}
+              {activeTab === 'browse' && <PrinterBrowser onBack={() => setActiveTab('home')} />}
+              {activeTab === 'models' && <PublicModels onBack={() => setActiveTab('home')} />}
+              {activeTab === 'requests' && <MyRequests onBack={() => setActiveTab('home')} />}
+              {activeTab === 'profile' && renderProfileContent()}
+            </>
+          )}
         </div>
       </div>
     </div>
