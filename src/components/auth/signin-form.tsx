@@ -253,7 +253,7 @@ export const SignInForm = ({
 
           <div className="text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <a href="/signup" className="text-primary hover:underline">
+            <a href="/auth/signup" className="text-primary hover:underline">
               Create account
             </a>
           </div>

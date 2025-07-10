@@ -3,20 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SignInForm } from '@/components/auth/signin-form';
-import { handleApiError } from '@/lib/utils';
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   // Handle email/password sign in
   const handleSignIn = async (data: { email: string; password: string }) => {
     setLoading(true);
-    setError(undefined);
+    setError(null);
 
     try {
-      // Integration with backend API
+      // TODO: Replace with your actual authentication API call
       const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -40,7 +39,7 @@ export default function SignInPage() {
         router.push('/customer/dashboard');
       }
     } catch (err) {
-      setError(handleApiError(err));
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -49,13 +48,14 @@ export default function SignInPage() {
   // Handle Google OAuth sign in
   const handleGoogleSignIn = async () => {
     setLoading(true);
-    setError(undefined);
+    setError(null);
 
     try {
-      // Integration with Google OAuth
+      // TODO: Replace with your actual Google OAuth flow
+      // This could redirect to your OAuth endpoint or use a client-side OAuth library
       window.location.href = '/api/auth/google?type=signin';
     } catch (err) {
-      setError(handleApiError(err));
+      setError('Google sign in failed');
       setLoading(false);
     }
   };

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { EmailVerification } from '@/components/auth/email-verification';
 import { handleApiError } from '@/lib/utils';
+import api from '@/lib/api';
 
 type VerificationStatus = 'pending' | 'verified' | 'expired' | 'error';
 
@@ -39,18 +40,9 @@ function EmailVerificationContent() {
     setLoading(true);
     
     try {
-      // Integration with backend API
-      const response = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Verification failed');
-      }
-
+      // Using the API utility to make the request to the backend
+      await api.post('/auth/verify-email', { token });
+      
       setStatus('verified');
       
       // Redirect to dashboard after successful verification
@@ -72,18 +64,9 @@ function EmailVerificationContent() {
     setError('');
 
     try {
-      // Integration with backend API
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to resend verification email');
-      }
-
+      // Using the API utility to make the request to the backend
+      await api.post('/auth/resend-verification', { email });
+      
       setResendCooldown(60); // 60 second cooldown
       setStatus('pending');
     } catch (err) {

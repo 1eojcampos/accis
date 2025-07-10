@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SignUpForm } from '@/components/auth/signup-form';
-import { handleApiError } from '@/lib/utils';
 
 export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
@@ -16,11 +15,12 @@ export default function SignUpPage() {
     setError(undefined);
 
     try {
-      // Integration with backend API
-      const response = await fetch('/api/auth/signup', {
+      // Call the backend API
+      const response = await fetch('http://localhost:5000/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -33,7 +33,7 @@ export default function SignUpPage() {
       // Navigate to email verification with user email
       router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (err) {
-      setError(handleApiError(err));
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -45,10 +45,11 @@ export default function SignUpPage() {
     setError(undefined);
 
     try {
-      // Integration with Google OAuth
+      // TODO: Replace with your actual Google OAuth flow
+      // Pass the role as a parameter to your OAuth endpoint
       window.location.href = `/api/auth/google?type=signup&role=${role}`;
     } catch (err) {
-      setError(handleApiError(err));
+      setError('Google sign up failed');
       setLoading(false);
     }
   };
