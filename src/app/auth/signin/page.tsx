@@ -3,11 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SignInForm } from '@/components/auth/signin-form';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, getFirestore } from 'firebase/firestore';
 
 export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const auth = getAuth();
+  const db = getFirestore();
 
   // Handle email/password sign in
   const handleSignIn = async (data: { email: string; password: string }) => {
@@ -15,31 +19,33 @@ export default function SignInPage() {
     setError(null);
 
     try {
-      // TODO: Replace with your actual authentication API call
-      const response = await fetch('http://localhost:5000/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      // Sign in with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Sign in failed');
+      // Get the user's custom claims (role) from Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        throw new Error('User data not found');
       }
 
-      const result = await response.json();
+      const userData = userDoc.data();
       
-      // Store auth token or user data as needed
-      localStorage.setItem('authToken', result.token);
-      
-      // Navigate based on user role
-      if (result.user.role === 'provider') {
-        router.push('/provider/dashboard');
-      } else {
-        router.push('/customer/dashboard');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      // Get the ID token
+      const idToken = await user.getIdToken();
+
+      // Store auth token and user data
+      localStorage.setItem('authToken', `Bearer ${idToken}`);
+      localStorage.setItem('user', JSON.stringify({
+        email: user.email,
+        role: userData.role
+      }));
+
+      // Force a fresh mount of HomePage
+      router.replace('/');
+    } catch (err: any) {
+      console.error('Sign in error:', err);
+      setError(err.message || 'Failed to sign in');
     } finally {
       setLoading(false);
     }

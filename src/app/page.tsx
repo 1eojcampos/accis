@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { doc, getDoc, getFirestore } from 'firebase/firestore'
 import SplitWithScreenshotOnDark from "@/components/blocks/heros/split-with-screenshot-on-dark"
 import OrderCreation from "@/components/blocks/order-creation"
 import ProviderDiscovery from "@/components/blocks/provider-discovery"
@@ -35,10 +37,68 @@ type UserRole = 'customer' | 'provider' | null
 export default function HomePage() {
   const [currentSection, setCurrentSection] = useState<AppSection>('home')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [userLoggedIn] = useState(false) // Changed to true to show logged-in state
-  const [userRole] = useState<UserRole>('provider') // Set to provider role
-  const [notifications] = useState(3) // Simulated notification count
-  const [cartItems] = useState(2) // Simulated cart items
+  const [userLoggedIn, setUserLoggedIn] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole>(null)
+  const [notifications] = useState(3)
+  const [cartItems] = useState(2)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check authentication and set initial section
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        if (user) {
+          // Get user data from Firestore
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserLoggedIn(true);
+            setUserRole(userData.role);
+            
+            // Set initial section based on user role
+            if (userData.role === 'customer') {
+              setCurrentSection('customer-dashboard');
+            } else if (userData.role === 'provider') {
+              setCurrentSection('provider-dashboard');
+            }
+
+            // Update stored data
+            const idToken = await user.getIdToken();
+            localStorage.setItem('authToken', `Bearer ${idToken}`);
+            localStorage.setItem('user', JSON.stringify({
+              email: user.email,
+              role: userData.role
+            }));
+          } else {
+            throw new Error('User data not found');
+          }
+        } else {
+          // User is signed out
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          setUserLoggedIn(false);
+          setUserRole(null);
+          setCurrentSection('home');
+        }
+      } catch (error) {
+        console.error('Auth error:', error);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        setUserLoggedIn(false);
+        setUserRole(null);
+        setCurrentSection('home');
+      } finally {
+        setIsLoading(false);
+      }
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, [])
 
   // Restricted navigation for logged-out users
   const publicNavigationItems = [
@@ -144,6 +204,20 @@ export default function HomePage() {
     setMobileMenuOpen(false)
   }
 
+  const handleSignOut = async () => {
+    try {
+      const auth = getAuth();
+      await auth.signOut();
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      setUserLoggedIn(false);
+      setUserRole(null);
+      setCurrentSection('home');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  }
+
   const renderNavigation = () => (
     <nav className="bg-card border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -214,6 +288,14 @@ export default function HomePage() {
                 <div className="flex items-center space-x-2">
                   <button className="p-1 rounded-full bg-primary text-primary-foreground">
                     <User className="w-4 h-4" />
+                  </button>
+
+                  {/* Sign Out Button */}
+                  <button
+                    onClick={handleSignOut}
+                    className="p-1 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <LogOut className="w-4 h-4" />
                   </button>
                 </div>
               </>
