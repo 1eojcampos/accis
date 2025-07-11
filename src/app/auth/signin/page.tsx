@@ -77,7 +77,7 @@ export default function SignInPage() {
       onGoogleSignIn={handleGoogleSignIn}
       onForgotPassword={handleForgotPassword}
       loading={loading}
-      error={error}
+      error={error || undefined}
     />
   );
 }

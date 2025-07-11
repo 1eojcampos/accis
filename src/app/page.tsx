@@ -77,12 +77,36 @@ export default function HomePage() {
             throw new Error('User data not found');
           }
         } else {
-          // User is signed out
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
-          setUserLoggedIn(false);
-          setUserRole(null);
-          setCurrentSection('home');
+          // Check for demo authentication data
+          const demoUser = localStorage.getItem('user');
+          if (demoUser) {
+            try {
+              const userData = JSON.parse(demoUser);
+              setUserLoggedIn(true);
+              setUserRole(userData.role);
+              
+              // Set initial section based on user role
+              if (userData.role === 'customer') {
+                setCurrentSection('customer-dashboard');
+              } else if (userData.role === 'provider') {
+                setCurrentSection('provider-dashboard');
+              }
+            } catch (error) {
+              console.error('Error parsing demo user data:', error);
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('user');
+              setUserLoggedIn(false);
+              setUserRole(null);
+              setCurrentSection('home');
+            }
+          } else {
+            // User is signed out
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('user');
+            setUserLoggedIn(false);
+            setUserRole(null);
+            setCurrentSection('home');
+          }
         }
       } catch (error) {
         console.error('Auth error:', error);
@@ -411,7 +435,7 @@ export default function HomePage() {
           window.location.href = '/auth/signin'
           return null
         }
-        return <OrderTracking userRole={userRole} />
+        return <OrderTracking />
       case 'customer-dashboard':
         // Protect this section - only customers can access
         if (!userLoggedIn || userRole !== 'customer') {
