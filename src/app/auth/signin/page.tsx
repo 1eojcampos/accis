@@ -16,7 +16,7 @@ export default function SignInPage() {
 
     try {
       // TODO: Replace with your actual authentication API call
-      const response = await fetch('/api/auth/signin', {
+      const response = await fetch('http://localhost:5000/api/auth/signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
