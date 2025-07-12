@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +18,7 @@ import { Printer, Plus, Edit, Trash2, Search, Settings, MapPin, Zap, ZapOff, Fil
 
 interface Printer {
   id: string;
+  userId: string;  // ID of the provider who owns this printer
   name: string;
   model: string;
   technology: 'FDM' | 'SLA' | 'SLS';
@@ -30,6 +33,8 @@ interface Printer {
   location: string;
   description: string;
   condition: 'Excellent' | 'Good' | 'Fair' | 'Needs Maintenance';
+  createdAt: string;  // ISO string of when the printer was added
+  updatedAt?: string; // ISO string of last update
 }
 
 const initialPrinters: Printer[] = [
@@ -117,12 +122,32 @@ export const ManagePrinters = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
-  const [formData, setFormData] = useState<Partial<Printer>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const auth = getAuth();
+  const db = getFirestore();
+  
+  const defaultFormData: Partial<Printer> = {
+    name: '',
+    model: '',
+    technology: 'FDM',
+    buildVolume: { x: 0, y: 0, z: 0 },
+    supportedMaterials: [],
+    hourlyRate: 0,
+    available: true,
+    location: '',
+    description: '',
+    condition: 'Excellent'
+  };
+
+  const [formData, setFormData] = useState<Partial<Printer>>(defaultFormData);
 
   const filteredPrinters = printers.filter(printer => {
-    const matchesSearch = printer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         printer.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         printer.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = searchTerm === '' || (
+      (printer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (printer.model?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+      (printer.location?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    );
     
     const matchesTechnology = filterTechnology === 'all' || printer.technology === filterTechnology;
     const matchesStatus = filterStatus === 'all' || 
@@ -132,64 +157,159 @@ export const ManagePrinters = () => {
     return matchesSearch && matchesTechnology && matchesStatus;
   });
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      model: '',
-      technology: 'FDM',
-      buildVolume: { x: 0, y: 0, z: 0 },
-      supportedMaterials: [],
-      hourlyRate: 0,
-      available: true,
-      location: '',
-      description: '',
-      condition: 'Excellent'
-    });
-  };
+  // Fetch printers from Firebase on component mount
+  useEffect(() => {
+    const fetchPrinters = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'printers'));
+        const printersData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            buildVolume: data.buildVolume || { x: 0, y: 0, z: 0 },
+            supportedMaterials: data.supportedMaterials || [],
+            hourlyRate: data.hourlyRate || 0,
+            available: data.available ?? true,
+            condition: data.condition || 'Excellent',
+          } as Printer;
+        });
+        setPrinters(printersData);
+      } catch (error) {
+        console.error('Error fetching printers:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPrinters();
+  }, [db]);
 
   const handleAdd = () => {
+    setFormData(defaultFormData);
     setIsAddModalOpen(true);
-    resetForm();
   };
 
   const handleEdit = (printer: Printer) => {
     setEditingPrinter(printer);
-    setFormData(printer);
+    setFormData({ ...printer });
     setIsEditModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (isAddModalOpen && formData.name && formData.model) {
-      const newPrinter: Printer = {
-        ...formData,
-        id: Date.now().toString(),
-        buildVolume: formData.buildVolume || { x: 0, y: 0, z: 0 },
-        supportedMaterials: formData.supportedMaterials || [],
-        hourlyRate: formData.hourlyRate || 0,
-        available: formData.available ?? true,
-        location: formData.location || '',
-        description: formData.description || '',
-        condition: formData.condition || 'Excellent'
-      } as Printer;
-      
-      setPrinters([...printers, newPrinter]);
-      setIsAddModalOpen(false);
-    } else if (isEditModalOpen && editingPrinter && formData.name && formData.model) {
-      setPrinters(printers.map(p => 
-        p.id === editingPrinter.id ? { ...formData, id: editingPrinter.id } as Printer : p
-      ));
-      setIsEditModalOpen(false);
+  // Modified handleSaveAdd to store in Firebase
+  const handleSaveAdd = async (data: Partial<Printer>) => {
+    if (data.name && data.model) {
+      try {
+        const userId = auth.currentUser?.uid;
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+
+        const printerData = {
+          ...defaultFormData,
+          ...data,
+          userId, // Store the ID of the provider who added the printer
+          createdAt: new Date().toISOString(),
+        };
+
+        const docRef = await addDoc(collection(db, 'printers'), printerData);
+        const newPrinter = {
+          ...printerData,
+          id: docRef.id,
+        } as Printer;
+        
+        setPrinters([...printers, newPrinter]);
+        setIsAddModalOpen(false);
+      } catch (error) {
+        console.error('Error adding printer:', error);
+        // You might want to show an error message to the user here
+      }
     }
   };
 
-  const handleRemove = (id: string) => {
-    setPrinters(printers.filter(p => p.id !== id));
+  // Modified handleSaveEdit to update in Firebase
+  const handleSaveEdit = async (data: Partial<Printer>) => {
+    if (editingPrinter && data.name && data.model) {
+      try {
+        const userId = auth.currentUser?.uid;
+        if (!userId) {
+          throw new Error('User not authenticated');
+        }
+
+        // Verify the user owns this printer
+        if (editingPrinter.userId !== userId) {
+          throw new Error('Unauthorized to edit this printer');
+        }
+
+        const printerRef = doc(db, 'printers', editingPrinter.id);
+        await updateDoc(printerRef, {
+          ...data,
+          updatedAt: new Date().toISOString(),
+        });
+
+        setPrinters(printers.map(p => 
+          p.id === editingPrinter.id ? { ...p, ...data } as Printer : p
+        ));
+        setIsEditModalOpen(false);
+        setEditingPrinter(null);
+      } catch (error) {
+        console.error('Error updating printer:', error);
+        // You might want to show an error message to the user here
+      }
+    }
   };
 
-  const toggleAvailability = (id: string) => {
-    setPrinters(printers.map(p => 
-      p.id === id ? { ...p, available: !p.available } : p
-    ));
+  // Modified handleRemove to delete from Firebase
+  const handleRemove = async (id: string) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify the user owns this printer
+      const printer = printers.find(p => p.id === id);
+      if (printer?.userId !== userId) {
+        throw new Error('Unauthorized to delete this printer');
+      }
+
+      await deleteDoc(doc(db, 'printers', id));
+      setPrinters(printers.filter(p => p.id !== id));
+    } catch (error) {
+      console.error('Error removing printer:', error);
+      // You might want to show an error message to the user here
+    }
+  };
+
+  const toggleAvailability = async (id: string) => {
+    try {
+      const printer = printers.find(p => p.id === id);
+      if (!printer) return;
+
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      // Verify the user owns this printer
+      if (printer.userId !== userId) {
+        throw new Error('Unauthorized to update this printer');
+      }
+
+      const printerRef = doc(db, 'printers', id);
+      await updateDoc(printerRef, {
+        available: !printer.available,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Only update local state after successful Firebase update
+      setPrinters(printers.map(p => 
+        p.id === id ? { ...p, available: !p.available } : p
+      ));
+    } catch (error) {
+      console.error('Error toggling printer availability:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   const getTechnologyColor = (technology: string) => {
@@ -211,210 +331,232 @@ export const ManagePrinters = () => {
     }
   };
 
-  const PrinterModal = ({ isOpen, onOpenChange, title }: { isOpen: boolean; onOpenChange: (open: boolean) => void; title: string }) => (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="w-5 h-5" />
-            {title}
-          </DialogTitle>
-          <DialogDescription>
-            Configure printer specifications and settings
-          </DialogDescription>
-        </DialogHeader>
+  interface PrinterModalProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    title: string;
+    onSave: (data: Partial<Printer>) => void;
+    initialData: Partial<Printer>;
+  }
 
-        <div className="space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Printer Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Ultimaker S5 Pro"
-                />
+  const PrinterModal = ({ isOpen, onOpenChange, title, onSave, initialData }: PrinterModalProps) => {
+    const [localFormData, setLocalFormData] = useState<Partial<Printer>>(initialData);
+
+    // Reset form when modal opens with new initialData
+    useEffect(() => {
+      setLocalFormData(initialData);
+    }, [initialData]);
+
+    const handleSave = () => {
+      onSave(localFormData);
+      onOpenChange(false);
+    };
+
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="w-5 h-5" />
+              {title}
+            </DialogTitle>
+            <DialogDescription>
+              Configure printer specifications and settings
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Printer Name *</Label>
+                  <Input
+                    id="name"
+                    value={localFormData.name || ''}
+                    onChange={(e) => setLocalFormData({ ...localFormData, name: e.target.value })}
+                    placeholder="e.g., Ultimaker S5 Pro"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="model">Model *</Label>
+                  <Input
+                    id="model"
+                    value={localFormData.model || ''}
+                    onChange={(e) => setLocalFormData({ ...localFormData, model: e.target.value })}
+                    placeholder="e.g., Ultimaker S5 Pro Bundle"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="model">Model *</Label>
-                <Input
-                  id="model"
-                  value={formData.model || ''}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  placeholder="e.g., Ultimaker S5 Pro Bundle"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="technology">Technology Type</Label>
+                  <Select value={localFormData.technology} onValueChange={(value) => setLocalFormData({ ...localFormData, technology: value as any })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {technologyTypes.map(tech => (
+                        <SelectItem key={tech} value={tech}>{tech}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="condition">Condition</Label>
+                  <Select value={localFormData.condition} onValueChange={(value) => setLocalFormData({ ...localFormData, condition: value as any })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {conditionOptions.map(condition => (
+                        <SelectItem key={condition} value={condition}>{condition}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="technology">Technology Type</Label>
-                <Select value={formData.technology} onValueChange={(value) => setFormData({ ...formData, technology: value as any })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {technologyTypes.map(tech => (
-                      <SelectItem key={tech} value={tech}>{tech}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="condition">Condition</Label>
-                <Select value={formData.condition} onValueChange={(value) => setFormData({ ...formData, condition: value as any })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {conditionOptions.map(condition => (
-                      <SelectItem key={condition} value={condition}>{condition}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+            <Separator />
+
+            {/* Build Volume */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Box className="w-5 h-5" />
+                Build Volume (mm)
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="buildX">X-axis</Label>
+                  <Input
+                    id="buildX"
+                    type="number"
+                    value={localFormData.buildVolume?.x || ''}
+                    onChange={(e) => setLocalFormData({ 
+                      ...localFormData, 
+                      buildVolume: { ...localFormData.buildVolume!, x: parseInt(e.target.value) || 0 }
+                    })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="buildY">Y-axis</Label>
+                  <Input
+                    id="buildY"
+                    type="number"
+                    value={localFormData.buildVolume?.y || ''}
+                    onChange={(e) => setLocalFormData({ 
+                      ...localFormData, 
+                      buildVolume: { ...localFormData.buildVolume!, y: parseInt(e.target.value) || 0 }
+                    })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="buildZ">Z-axis</Label>
+                  <Input
+                    id="buildZ"
+                    type="number"
+                    value={localFormData.buildVolume?.z || ''}
+                    onChange={(e) => setLocalFormData({ 
+                      ...localFormData, 
+                      buildVolume: { ...localFormData.buildVolume!, z: parseInt(e.target.value) || 0 }
+                    })}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Build Volume */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Box className="w-5 h-5" />
-              Build Volume (mm)
-            </h3>
-            <div className="grid grid-cols-3 gap-4">
+            {/* Materials & Pricing */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Materials & Pricing</h3>
               <div className="space-y-2">
-                <Label htmlFor="buildX">X-axis</Label>
+                <Label>Supported Materials</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
+                  {availableMaterials.map(material => (
+                    <label key={material} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={localFormData.supportedMaterials?.includes(material) || false}
+                        onChange={(e) => {
+                          const materials = localFormData.supportedMaterials || [];
+                          if (e.target.checked) {
+                            setLocalFormData({ ...localFormData, supportedMaterials: [...materials, material] });
+                          } else {
+                            setLocalFormData({ ...localFormData, supportedMaterials: materials.filter(m => m !== material) });
+                          }
+                        }}
+                        className="accent-emerald-600"
+                      />
+                      {material}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
                 <Input
-                  id="buildX"
+                  id="hourlyRate"
                   type="number"
-                  value={formData.buildVolume?.x || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    buildVolume: { ...formData.buildVolume!, x: parseInt(e.target.value) || 0 }
-                  })}
+                  step="0.01"
+                  value={localFormData.hourlyRate || ''}
+                  onChange={(e) => setLocalFormData({ ...localFormData, hourlyRate: parseFloat(e.target.value) || 0 })}
+                  placeholder="12.50"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Location & Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Location & Details</h3>
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={localFormData.location || ''}
+                  onChange={(e) => setLocalFormData({ ...localFormData, location: e.target.value })}
+                  placeholder="Workshop A - Station 1"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="buildY">Y-axis</Label>
-                <Input
-                  id="buildY"
-                  type="number"
-                  value={formData.buildVolume?.y || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    buildVolume: { ...formData.buildVolume!, y: parseInt(e.target.value) || 0 }
-                  })}
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={localFormData.description || ''}
+                  onChange={(e) => setLocalFormData({ ...localFormData, description: e.target.value })}
+                  placeholder="Describe the printer's capabilities and features..."
+                  rows={3}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="buildZ">Z-axis</Label>
-                <Input
-                  id="buildZ"
-                  type="number"
-                  value={formData.buildVolume?.z || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    buildVolume: { ...formData.buildVolume!, z: parseInt(e.target.value) || 0 }
-                  })}
+              <div className="flex items-center justify-between p-4 border rounded-md">
+                <div>
+                  <Label className="text-base font-medium">Available for Jobs</Label>
+                  <p className="text-sm text-muted-foreground">Enable this printer to accept new print jobs</p>
+                </div>
+                <Switch
+                  checked={localFormData.available || false}
+                  onCheckedChange={(checked) => setLocalFormData({ ...localFormData, available: checked })}
                 />
               </div>
             </div>
           </div>
 
-          <Separator />
-
-          {/* Materials & Pricing */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Materials & Pricing</h3>
-            <div className="space-y-2">
-              <Label>Supported Materials</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
-                {availableMaterials.map(material => (
-                  <label key={material} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={formData.supportedMaterials?.includes(material) || false}
-                      onChange={(e) => {
-                        const materials = formData.supportedMaterials || [];
-                        if (e.target.checked) {
-                          setFormData({ ...formData, supportedMaterials: [...materials, material] });
-                        } else {
-                          setFormData({ ...formData, supportedMaterials: materials.filter(m => m !== material) });
-                        }
-                      }}
-                      className="accent-emerald-600"
-                    />
-                    {material}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
-              <Input
-                id="hourlyRate"
-                type="number"
-                step="0.01"
-                value={formData.hourlyRate || ''}
-                onChange={(e) => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })}
-                placeholder="12.50"
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Location & Details */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Location & Details</h3>
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={formData.location || ''}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Workshop A - Station 1"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description || ''}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Describe the printer's capabilities and features..."
-                rows={3}
-              />
-            </div>
-            <div className="flex items-center justify-between p-4 border rounded-md">
-              <div>
-                <Label className="text-base font-medium">Available for Jobs</Label>
-                <p className="text-sm text-muted-foreground">Enable this printer to accept new print jobs</p>
-              </div>
-              <Switch
-                checked={formData.available || false}
-                onCheckedChange={(checked) => setFormData({ ...formData, available: checked })}
-              />
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
-            {isAddModalOpen ? 'Add Printer' : 'Save Changes'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
+              {title.includes('Add') ? 'Add Printer' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+};
 
   return (
     <div className="space-y-6">
@@ -553,7 +695,10 @@ export const ManagePrinters = () => {
                       Build Volume
                     </h4>
                     <p className="text-sm">
-                      {printer.buildVolume.x} × {printer.buildVolume.y} × {printer.buildVolume.z} mm
+                      {printer.buildVolume ? 
+                        `${printer.buildVolume.x} × ${printer.buildVolume.y} × ${printer.buildVolume.z} mm` : 
+                        'Not specified'
+                      }
                     </p>
                   </div>
                   <div>
@@ -561,7 +706,7 @@ export const ManagePrinters = () => {
                       <DollarSign className="w-4 h-4" />
                       Hourly Rate
                     </h4>
-                    <p className="text-sm font-semibold">${printer.hourlyRate.toFixed(2)}/hour</p>
+                    <p className="text-sm font-semibold">${(printer.hourlyRate ?? 0).toFixed(2)}/hour</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center gap-1">
@@ -600,12 +745,16 @@ export const ManagePrinters = () => {
         isOpen={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         title="Add New Printer"
+        onSave={handleSaveAdd}
+        initialData={defaultFormData}
       />
       
       <PrinterModal
         isOpen={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         title="Edit Printer"
+        onSave={handleSaveEdit}
+        initialData={formData}
       />
     </div>
   );
