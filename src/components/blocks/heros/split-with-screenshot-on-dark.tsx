@@ -102,7 +102,7 @@ export default function SplitWithScreenshotOnDark() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-card)' }}>
                     <div className="w-full h-24 rounded-md bg-neutral-600 mb-3"></div>
-                    <h4 className="font-medium text-sm font-[var(--font-display)]" style={{ color: 'var(--color-foreground)' }}>PrintHub Pro</h4>
+                    <h4 className="font-medium text-sm font-[var(--font-display)]" style={{ color: 'var(--color-foreground)' }}>Accis Pro</h4>
                     <p className="text-xs text-neutral-400">0.3 miles away</p>
                     <div className="flex items-center mt-2">
                       <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: '#10b981' }}></div>

@@ -145,10 +145,10 @@ export function CenteredWithLogo() {
             <div className="flex items-center gap-2 justify-center">
               <Mail className="h-4 w-4 text-emerald-400" />
               <Link
-                href="mailto:support@printhub.com"
+                href="mailto:support@accis.com"
                 className="text-neutral-400 hover:text-emerald-400 transition-colors font-[var(--font-body)]"
               >
-                support@printhub.com
+                support@accis.com
               </Link>
             </div>
             <div className="flex items-center gap-2 justify-center">
@@ -170,7 +170,7 @@ export function CenteredWithLogo() {
         </div>
         <div className="flex sm:flex-row flex-col justify-between mt-8 items-center w-full">
           <p className="text-neutral-500 mb-8 sm:mb-0 font-[var(--font-body)]">
-            &copy; 2024 PrintHub. All rights reserved.
+            &copy; 2024 Accis. All rights reserved.
           </p>
           <div className="flex gap-4">
             <Link href="#" className="hover:text-emerald-400 transition-colors">
@@ -239,7 +239,7 @@ const Logo = () => {
       <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
         <span className="text-white font-bold text-lg font-[var(--font-display)]">P</span>
       </div>
-      <span className="font-semibold text-white text-xl font-[var(--font-display)]">PrintHub</span>
+      <span className="font-semibold text-white text-xl font-[var(--font-display)]">Accis</span>
     </Link>
   );
 };

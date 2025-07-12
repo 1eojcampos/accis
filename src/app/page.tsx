@@ -252,9 +252,9 @@ export default function HomePage() {
             onClick={() => handleSectionChange('home')}
           >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">P</span>
+              <span className="text-primary-foreground font-bold text-lg">A</span>
             </div>
-            <span className="font-semibold text-foreground text-xl">PrintHub</span>
+            <span className="font-semibold text-foreground text-xl">Accis</span>
           </div>
 
           {/* Desktop Navigation */}

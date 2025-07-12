@@ -3,7 +3,7 @@ import RootLayoutClient from "@/components/root-layout-client";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PrintHub",
+  title: "Accis",
   description: "Your local 3D printing marketplace",
   icons: {
     icon: '/favicon.ico',
