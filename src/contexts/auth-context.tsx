@@ -96,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    localStorage.removeItem('token');
     await signOut(auth);
     router.push('/login');
   };
@@ -134,6 +135,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         try {
+          // Get the ID token and store it in localStorage
+          const token = await user.getIdToken();
+          localStorage.setItem('token', token);
+          
           const profile = await getUserProfile(user.uid);
           if (profile) {
             setUserProfile(profile);
@@ -168,6 +173,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUserProfile(null);
+        // Remove token when user logs out
+        localStorage.removeItem('token');
       }
       
       setLoading(false);

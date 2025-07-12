@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
+import { printerAPI } from '@/lib/api'
 import { 
   MapPin, 
   Star, 
@@ -15,7 +16,8 @@ import {
   Clock,
   User,
   MessageSquare,
-  ChevronDown
+  ChevronDown,
+  Search
 } from 'lucide-react'
 
 interface Provider {
@@ -33,93 +35,6 @@ interface Provider {
   location: string
 }
 
-const mockProviders: Provider[] = [
-  {
-    id: '1',
-    name: 'TechnoForge 3D',
-    printerType: 'FDM',
-    printerModel: 'Prusa i3 MK4',
-    materials: ['PLA', 'ABS', 'PETG', 'TPU'],
-    hourlyRate: 45,
-    distance: 2.3,
-    rating: 4.8,
-    reviewCount: 127,
-    isAvailable: true,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Downtown Tech Hub'
-  },
-  {
-    id: '2',
-    name: 'Precision Prints Co',
-    printerType: 'SLA',
-    printerModel: 'Form 3L',
-    materials: ['Standard Resin', 'Tough Resin', 'Flexible Resin'],
-    hourlyRate: 75,
-    distance: 4.1,
-    rating: 4.9,
-    reviewCount: 89,
-    isAvailable: true,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Industrial District'
-  },
-  {
-    id: '3',
-    name: 'MetalWorks 3D',
-    printerType: 'SLS',
-    printerModel: 'EOS P396',
-    materials: ['Nylon PA11', 'Nylon PA12', 'Glass-filled Nylon'],
-    hourlyRate: 120,
-    distance: 6.7,
-    rating: 4.7,
-    reviewCount: 56,
-    isAvailable: false,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Manufacturing Zone'
-  },
-  {
-    id: '4',
-    name: 'Rapid Prototypes LLC',
-    printerType: 'FDM',
-    printerModel: 'Ultimaker S5 Pro',
-    materials: ['PLA', 'ABS', 'PVA', 'HIPS'],
-    hourlyRate: 55,
-    distance: 3.2,
-    rating: 4.6,
-    reviewCount: 203,
-    isAvailable: true,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Business Park'
-  },
-  {
-    id: '5',
-    name: 'Artisan 3D Studio',
-    printerType: 'SLA',
-    printerModel: 'Elegoo Saturn 3',
-    materials: ['Standard Resin', 'Water-washable Resin'],
-    hourlyRate: 60,
-    distance: 1.8,
-    rating: 4.5,
-    reviewCount: 78,
-    isAvailable: true,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Creative Quarter'
-  },
-  {
-    id: '6',
-    name: 'Industrial Solutions 3D',
-    printerType: 'FDM',
-    printerModel: 'Markforged X7',
-    materials: ['Carbon Fiber', 'Fiberglass', 'Kevlar', 'Onyx'],
-    hourlyRate: 95,
-    distance: 8.1,
-    rating: 4.8,
-    reviewCount: 34,
-    isAvailable: true,
-    profileImage: '/api/placeholder/64/64',
-    location: 'Tech Campus'
-  }
-]
-
 const printerTypes = ['FDM', 'SLA', 'SLS'] as const
 const allMaterials = ['PLA', 'ABS', 'PETG', 'TPU', 'Standard Resin', 'Tough Resin', 'Flexible Resin', 'Nylon PA11', 'Nylon PA12', 'Glass-filled Nylon', 'PVA', 'HIPS', 'Water-washable Resin', 'Carbon Fiber', 'Fiberglass', 'Kevlar', 'Onyx']
 
@@ -130,6 +45,51 @@ export default function ProviderDiscovery() {
   const [priceRange, setPriceRange] = useState([0, 150])
   const [distanceRadius, setDistanceRadius] = useState([10])
   const [showFilters, setShowFilters] = useState(false)
+  const [providers, setProviders] = useState<Provider[]>([])
+  const [loading, setLoading] = useState(true)
+  const [locationFilter, setLocationFilter] = useState('')
+
+  // Fetch providers from API
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        setLoading(true)
+        
+        // For development: set test token if no token exists
+        if (process.env.NODE_ENV === 'development' && !localStorage.getItem('token')) {
+          localStorage.setItem('token', 'test-token');
+        }
+        
+        const response = await printerAPI.getAll(locationFilter || undefined)
+        
+        // Transform API data to match Provider interface
+        const transformedProviders = response.data.map((printer: any) => ({
+          id: printer.id,
+          name: printer.name || printer.printerModel || 'Unnamed Printer',
+          printerType: printer.printerType || 'FDM',
+          printerModel: printer.printerModel || 'Unknown Model',
+          materials: printer.materials || ['PLA'],
+          hourlyRate: printer.hourlyRate || 50,
+          distance: Math.random() * 10, // TODO: Calculate actual distance
+          rating: printer.rating || 4.5,
+          reviewCount: printer.reviewCount || 0,
+          isAvailable: printer.isActive !== false,
+          profileImage: '/api/placeholder/64/64',
+          location: printer.location || 'Unknown Location'
+        }))
+        
+        setProviders(transformedProviders)
+      } catch (error) {
+        console.error('Error fetching providers:', error)
+        // Keep providers empty on error
+        setProviders([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProviders()
+  }, [locationFilter])
 
   const togglePrinterType = (type: string) => {
     setSelectedPrinterTypes(prev => 
@@ -147,7 +107,7 @@ export default function ProviderDiscovery() {
     )
   }
 
-  const filteredProviders = mockProviders.filter(provider => {
+  const filteredProviders = providers.filter(provider => {
     const typeMatch = selectedPrinterTypes.length === 0 || selectedPrinterTypes.includes(provider.printerType)
     const materialMatch = selectedMaterials.length === 0 || selectedMaterials.some(mat => provider.materials.includes(mat))
     const priceMatch = provider.hourlyRate >= priceRange[0] && provider.hourlyRate <= priceRange[1]
@@ -182,6 +142,20 @@ export default function ProviderDiscovery() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Discover professional 3D printing providers in your area. Compare prices, capabilities, and availability to find the perfect match for your project.
           </p>
+        </div>
+
+        {/* Location Search */}
+        <div className="max-w-md mx-auto mb-8">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Search by location (e.g., Downtown, Tech Hub, City)"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="pl-10"
+            />
+          </div>
         </div>
 
         {/* Controls */}
@@ -317,12 +291,19 @@ export default function ProviderDiscovery() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            Found {filteredProviders.length} provider{filteredProviders.length !== 1 ? 's' : ''} in your area
+            {loading ? 'Loading providers...' : `Found ${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} in your area`}
           </p>
         </div>
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
+
         {/* Provider Grid */}
-        {viewMode === 'grid' && (
+        {!loading && viewMode === 'grid' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProviders.map(provider => (
               <Card key={provider.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">

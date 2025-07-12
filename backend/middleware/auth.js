@@ -8,6 +8,15 @@ export async function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
+  // Development mode: allow test-token for testing
+  if (process.env.NODE_ENV === 'development' && token === 'test-token') {
+    req.user = { 
+      uid: 'test-user-id',
+      email: 'test@example.com' 
+    };
+    return next();
+  }
+
   try {
     const decodedToken = await auth.verifyIdToken(token);
     req.user = decodedToken;

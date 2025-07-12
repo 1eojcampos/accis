@@ -32,4 +32,25 @@ api.interceptors.response.use(
   }
 );
 
+// Printer API functions
+export const printerAPI = {
+  // Get all printers with optional location filter
+  getAll: (location?: string) => {
+    const params = location ? { location } : {};
+    return api.get('/printers', { params });
+  },
+  
+  // Get current user's printers (for provider management)
+  getMyPrinters: () => api.get('/printers/my-printers'),
+  
+  // Create new printer
+  create: (printerData: any) => api.post('/printers', printerData),
+  
+  // Update printer
+  update: (id: string, printerData: any) => api.put(`/printers/${id}`, printerData),
+  
+  // Delete printer
+  delete: (id: string) => api.delete(`/printers/${id}`)
+};
+
 export default api;

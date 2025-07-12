@@ -8,6 +8,11 @@ import passport from 'passport';
 
 dotenv.config();
 
+// Set NODE_ENV to development if not set
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development';
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 

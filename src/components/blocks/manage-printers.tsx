@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { printerAPI } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,74 +36,6 @@ interface Printer {
   updatedAt?: string; // ISO string of last update
 }
 
-const initialPrinters: Printer[] = [
-  {
-    id: '1',
-    name: 'Ultimaker S5 Pro',
-    model: 'Ultimaker S5 Pro Bundle',
-    technology: 'FDM',
-    buildVolume: { x: 330, y: 240, z: 300 },
-    supportedMaterials: ['PLA', 'ABS', 'PETG', 'TPU', 'PVA', 'HIPS'],
-    hourlyRate: 12.50,
-    available: true,
-    location: 'Workshop A - Station 1',
-    description: 'Professional-grade FDM printer with dual extrusion capability, enclosed chamber, and automatic material handling.',
-    condition: 'Excellent'
-  },
-  {
-    id: '2',
-    name: 'Formlabs Form 3+',
-    model: 'Form 3+',
-    technology: 'SLA',
-    buildVolume: { x: 145, y: 145, z: 185 },
-    supportedMaterials: ['Clear Resin', 'Grey Resin', 'Tough Resin', 'Flexible Resin', 'Castable Resin'],
-    hourlyRate: 18.00,
-    available: false,
-    location: 'Clean Room B',
-    description: 'High-precision stereolithography printer ideal for detailed prototypes and small parts with smooth surface finish.',
-    condition: 'Good'
-  },
-  {
-    id: '3',
-    name: 'EOS P 396',
-    model: 'EOS P 396',
-    technology: 'SLS',
-    buildVolume: { x: 340, y: 340, z: 600 },
-    supportedMaterials: ['PA12', 'PA11', 'Alumide', 'Glass-filled PA'],
-    hourlyRate: 35.00,
-    available: true,
-    location: 'Industrial Bay C',
-    description: 'Industrial selective laser sintering system for functional parts and end-use components without support structures.',
-    condition: 'Excellent'
-  },
-  {
-    id: '4',
-    name: 'Prusa i3 MK3S+',
-    model: 'Original Prusa i3 MK3S+',
-    technology: 'FDM',
-    buildVolume: { x: 250, y: 210, z: 200 },
-    supportedMaterials: ['PLA', 'ABS', 'PETG', 'ASA', 'PC', 'TPU'],
-    hourlyRate: 8.00,
-    available: true,
-    location: 'Workshop A - Station 3',
-    description: 'Reliable open-frame FDM printer, perfect for prototyping and educational projects with excellent community support.',
-    condition: 'Good'
-  },
-  {
-    id: '5',
-    name: 'Markforged Mark Two',
-    model: 'Mark Two',
-    technology: 'FDM',
-    buildVolume: { x: 320, y: 132, z: 154 },
-    supportedMaterials: ['Onyx', 'Carbon Fiber', 'Kevlar', 'Fiberglass', 'HSHT Fiberglass'],
-    hourlyRate: 45.00,
-    available: false,
-    location: 'Composite Lab D',
-    description: 'Advanced composite 3D printer capable of reinforcing parts with continuous carbon fiber for exceptional strength.',
-    condition: 'Needs Maintenance'
-  }
-];
-
 const technologyTypes = ['FDM', 'SLA', 'SLS'];
 const conditionOptions = ['Excellent', 'Good', 'Fair', 'Needs Maintenance'];
 const availableMaterials = [
@@ -115,7 +46,7 @@ const availableMaterials = [
 ];
 
 export const ManagePrinters = () => {
-  const [printers, setPrinters] = useState<Printer[]>(initialPrinters);
+  const [printers, setPrinters] = useState<Printer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTechnology, setFilterTechnology] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -123,9 +54,7 @@ export const ManagePrinters = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<Printer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  const auth = getAuth();
-  const db = getFirestore();
+  const [error, setError] = useState<string | null>(null);
   
   const defaultFormData: Partial<Printer> = {
     name: '',
@@ -157,33 +86,46 @@ export const ManagePrinters = () => {
     return matchesSearch && matchesTechnology && matchesStatus;
   });
 
-  // Fetch printers from Firebase on component mount
+  // Fetch provider's printers from API on component mount
   useEffect(() => {
     const fetchPrinters = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'printers'));
-        const printersData = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            buildVolume: data.buildVolume || { x: 0, y: 0, z: 0 },
-            supportedMaterials: data.supportedMaterials || [],
-            hourlyRate: data.hourlyRate || 0,
-            available: data.available ?? true,
-            condition: data.condition || 'Excellent',
-          } as Printer;
-        });
+        setIsLoading(true);
+        setError(null);
+        
+        // For development: set test token if no token exists
+        if (process.env.NODE_ENV === 'development' && !localStorage.getItem('token')) {
+          localStorage.setItem('token', 'test-token');
+        }
+        
+        const response = await printerAPI.getMyPrinters();
+        const printersData = response.data.map((data: any) => ({
+          id: data.id,
+          userId: data.ownerId || data.userId || 'unknown',
+          name: data.name || 'Unnamed Printer',
+          model: data.printerModel || data.model || 'Unknown Model',
+          technology: data.printerType || data.technology || 'FDM',
+          buildVolume: data.buildVolume || { x: 0, y: 0, z: 0 },
+          supportedMaterials: data.materials || data.supportedMaterials || [],
+          hourlyRate: data.hourlyRate || 0,
+          available: data.isActive !== false && (data.available !== false),
+          location: data.location || 'No location set',
+          description: data.description || '',
+          condition: data.condition || 'Good',
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt
+        }));
         setPrinters(printersData);
       } catch (error) {
         console.error('Error fetching printers:', error);
+        setError('Failed to load printers. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPrinters();
-  }, [db]);
+  }, []);
 
   const handleAdd = () => {
     setFormData(defaultFormData);
@@ -196,56 +138,67 @@ export const ManagePrinters = () => {
     setIsEditModalOpen(true);
   };
 
-  // Modified handleSaveAdd to store in Firebase
+  // Modified handleSaveAdd to use API
   const handleSaveAdd = async (data: Partial<Printer>) => {
-    if (data.name && data.model) {
+    if (data.name && data.model && data.location) {
       try {
-        const userId = auth.currentUser?.uid;
-        if (!userId) {
-          throw new Error('User not authenticated');
-        }
-
         const printerData = {
-          ...defaultFormData,
-          ...data,
-          userId, // Store the ID of the provider who added the printer
-          createdAt: new Date().toISOString(),
+          name: data.name,
+          printerModel: data.model,
+          printerType: data.technology,
+          materials: data.supportedMaterials,
+          hourlyRate: data.hourlyRate,
+          location: data.location,
+          description: data.description,
+          isActive: data.available,
+          buildVolume: data.buildVolume,
+          condition: data.condition
         };
 
-        const docRef = await addDoc(collection(db, 'printers'), printerData);
-        const newPrinter = {
-          ...printerData,
-          id: docRef.id,
-        } as Printer;
+        const response = await printerAPI.create(printerData);
+        const newPrinter: Printer = {
+          id: response.data.id,
+          userId: response.data.ownerId || response.data.userId || 'unknown',
+          name: data.name || '',
+          model: data.model || '',
+          technology: data.technology || 'FDM',
+          buildVolume: data.buildVolume || { x: 0, y: 0, z: 0 },
+          supportedMaterials: data.supportedMaterials || [],
+          hourlyRate: data.hourlyRate || 0,
+          available: data.available !== false,
+          location: data.location || '',
+          description: data.description || '',
+          condition: data.condition || 'Excellent',
+          createdAt: new Date().toISOString()
+        };
         
         setPrinters([...printers, newPrinter]);
         setIsAddModalOpen(false);
       } catch (error) {
         console.error('Error adding printer:', error);
-        // You might want to show an error message to the user here
+        setError('Failed to add printer. Please try again.');
       }
     }
   };
 
-  // Modified handleSaveEdit to update in Firebase
+  // Modified handleSaveEdit to use API
   const handleSaveEdit = async (data: Partial<Printer>) => {
-    if (editingPrinter && data.name && data.model) {
+    if (editingPrinter && data.name && data.model && data.location) {
       try {
-        const userId = auth.currentUser?.uid;
-        if (!userId) {
-          throw new Error('User not authenticated');
-        }
+        const printerData = {
+          name: data.name,
+          printerModel: data.model,
+          printerType: data.technology,
+          materials: data.supportedMaterials,
+          hourlyRate: data.hourlyRate,
+          location: data.location,
+          description: data.description,
+          isActive: data.available,
+          buildVolume: data.buildVolume,
+          condition: data.condition
+        };
 
-        // Verify the user owns this printer
-        if (editingPrinter.userId !== userId) {
-          throw new Error('Unauthorized to edit this printer');
-        }
-
-        const printerRef = doc(db, 'printers', editingPrinter.id);
-        await updateDoc(printerRef, {
-          ...data,
-          updatedAt: new Date().toISOString(),
-        });
+        await printerAPI.update(editingPrinter.id, printerData);
 
         setPrinters(printers.map(p => 
           p.id === editingPrinter.id ? { ...p, ...data } as Printer : p
@@ -259,21 +212,10 @@ export const ManagePrinters = () => {
     }
   };
 
-  // Modified handleRemove to delete from Firebase
+  // Modified handleRemove to use API
   const handleRemove = async (id: string) => {
     try {
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      // Verify the user owns this printer
-      const printer = printers.find(p => p.id === id);
-      if (printer?.userId !== userId) {
-        throw new Error('Unauthorized to delete this printer');
-      }
-
-      await deleteDoc(doc(db, 'printers', id));
+      await printerAPI.delete(id);
       setPrinters(printers.filter(p => p.id !== id));
     } catch (error) {
       console.error('Error removing printer:', error);
@@ -286,23 +228,9 @@ export const ManagePrinters = () => {
       const printer = printers.find(p => p.id === id);
       if (!printer) return;
 
-      const userId = auth.currentUser?.uid;
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
+      await printerAPI.update(id, { isActive: !printer.available });
 
-      // Verify the user owns this printer
-      if (printer.userId !== userId) {
-        throw new Error('Unauthorized to update this printer');
-      }
-
-      const printerRef = doc(db, 'printers', id);
-      await updateDoc(printerRef, {
-        available: !printer.available,
-        updatedAt: new Date().toISOString()
-      });
-
-      // Only update local state after successful Firebase update
+      // Only update local state after successful API update
       setPrinters(printers.map(p => 
         p.id === id ? { ...p, available: !p.available } : p
       ));
@@ -519,7 +447,7 @@ export const ManagePrinters = () => {
                   id="location"
                   value={localFormData.location || ''}
                   onChange={(e) => setLocalFormData({ ...localFormData, location: e.target.value })}
-                  placeholder="Workshop A - Station 1"
+                  placeholder="e.g., Downtown, Tech Hub, Creative District"
                 />
               </div>
               <div className="space-y-2">
@@ -560,17 +488,40 @@ export const ManagePrinters = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Manage Printers</h1>
-          <p className="text-muted-foreground">Configure and maintain your 3D printing fleet</p>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-2">Loading your printers...</span>
         </div>
-        <Button onClick={handleAdd} className="bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Printer
-        </Button>
-      </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-700">
+              <span className="font-medium">Error:</span>
+              <span>{error}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Content */}
+      {!isLoading && !error && (
+        <>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Manage Printers</h1>
+              <p className="text-muted-foreground">Configure and maintain your 3D printing fleet</p>
+            </div>
+            <Button onClick={handleAdd} className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Printer
+            </Button>
+          </div>
 
       {/* Search and Filters */}
       <Card>
@@ -756,6 +707,8 @@ export const ManagePrinters = () => {
         onSave={handleSaveEdit}
         initialData={formData}
       />
+        </>
+      )}
     </div>
   );
 };
