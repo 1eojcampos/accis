@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator } from "lucide-react"
+import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -39,6 +39,30 @@ export default function OrderCreation() {
   const [selectedMaterial, setSelectedMaterial] = useState<string>("")
   const [selectedQuality, setSelectedQuality] = useState<string>("")
   const [requirements, setRequirements] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<string[]>([])
+
+  const generateExternalLinks = (query: string) => {
+    const encodedQuery = encodeURIComponent(query)
+    return {
+      yeggi: `https://www.yeggi.com/q/${encodedQuery}/`,
+      thingiverse: `https://www.thingiverse.com/search?q=${encodedQuery}&sort=relevance`
+    }
+  }
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      setSearchResults([searchQuery.trim()])
+    } else {
+      setSearchResults([])
+    }
+  }
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handleSearch()
+    }
+  }
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -172,9 +196,85 @@ export default function OrderCreation() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Step 1: File Upload */}
+                {/* Step 1: Browse & Upload */}
                 {currentStep === 1 && (
                   <div className="space-y-6">
+                    {/* Model Search Section */}
+                    <div className="space-y-4">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Search for 3D models..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyPress={handleKeyPress}
+                          className="flex-1"
+                        />
+                        <Button onClick={handleSearch} variant="outline">
+                          <Search className="w-4 h-4 mr-2" />
+                          Search
+                        </Button>
+                      </div>
+
+                      {/* Search Results */}
+                      {searchResults.length > 0 && (
+                        <div className="space-y-4 p-4 bg-muted/10 rounded-lg">
+                          <h4 className="font-medium text-card-foreground">External Model Sources:</h4>
+                          {searchResults.map((query, index) => {
+                            const links = generateExternalLinks(query);
+                            return (
+                              <div key={index} className="space-y-2">
+                                <div className="text-sm text-muted-foreground">
+                                  Results for: <span className="font-medium">"{query}"</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  <Button
+                                    variant="outline"
+                                    className="justify-start h-auto p-4"
+                                    onClick={() => window.open(links.yeggi, '_blank')}
+                                  >
+                                    <div className="text-left">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <ExternalLink className="w-4 h-4" />
+                                        <span className="font-medium">Yeggi.com</span>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Search millions of 3D models
+                                      </div>
+                                    </div>
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    className="justify-start h-auto p-4"
+                                    onClick={() => window.open(links.thingiverse, '_blank')}
+                                  >
+                                    <div className="text-left">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <ExternalLink className="w-4 h-4" />
+                                        <span className="font-medium">Thingiverse</span>
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Community-created designs
+                                      </div>
+                                    </div>
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {searchResults.length === 0 && searchQuery && (
+                        <div className="text-center py-6 text-muted-foreground">
+                          <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>Click search to find models on external platforms</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="border-t border-border pt-6"></div>
+
+                    {/* File Upload Section */}
                     <div
                       className={`
                         relative border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200
