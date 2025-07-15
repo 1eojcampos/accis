@@ -1,0 +1,97 @@
+[debug] [2025-07-15T03:03:31.915Z] ----------------------------------------------------------------------
+[debug] [2025-07-15T03:03:31.916Z] Command:       C:\Users\oscar\.nvm\versions\node\v22.17.0\bin\node.exe C:\Users\oscar\.nvm\versions\node\v22.17.0\bin\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only functions
+[debug] [2025-07-15T03:03:31.917Z] CLI Version:   14.9.0
+[debug] [2025-07-15T03:03:31.917Z] Platform:      win32
+[debug] [2025-07-15T03:03:31.917Z] Node Version:  v22.17.0
+[debug] [2025-07-15T03:03:31.917Z] Time:          Mon Jul 14 2025 22:03:31 GMT-0500 (Central Daylight Time)
+[debug] [2025-07-15T03:03:31.917Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-07-15T03:03:32.022Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-07-15T03:03:32.022Z] > authorizing via signed-in user (oscaramallen@gmail.com)
+[info] i  emulators: Starting emulators: functions {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: functions"}}
+[debug] [2025-07-15T03:03:32.030Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-15T03:03:32.031Z] assigned listening specs for emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2025-07-15T03:03:32.032Z] [hub] writing locator at C:\Users\oscar\AppData\Local\Temp\hub-accis-c376c.json
+[debug] [2025-07-15T03:03:32.042Z] [functions] Functions Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-15T03:03:32.042Z] [eventarc] Eventarc Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-15T03:03:32.042Z] [tasks] Cloud Tasks Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2025-07-15T03:03:32.042Z] late-assigned ports for functions and eventarc emulators {"user":{"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}],"functions":[{"address":"127.0.0.1","family":"IPv4","port":5001}],"eventarc":[{"address":"127.0.0.1","family":"IPv4","port":9299}],"tasks":[{"address":"127.0.0.1","family":"IPv4","port":9499}]},"metadata":{"message":"late-assigned ports for functions and eventarc emulators"}}
+[warn] !  functions: The following emulators are not running, calls to these services from the Functions emulator will affect production: apphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect {"metadata":{"emulator":{"name":"functions"},"message":"The following emulators are not running, calls to these services from the Functions emulator will affect production: \u001b[1mapphosting, auth, firestore, database, hosting, pubsub, storage, dataconnect\u001b[22m"}}
+[debug] [2025-07-15T03:03:32.066Z] defaultcredentials: writing to file C:\Users\oscar\AppData\Roaming\firebase\oscaramallen_gmail_com_application_default_credentials.json
+[debug] [2025-07-15T03:03:32.067Z] Setting GAC to C:\Users\oscar\AppData\Roaming\firebase\oscaramallen_gmail_com_application_default_credentials.json {"metadata":{"emulator":{"name":"functions"},"message":"Setting GAC to C:\\Users\\oscar\\AppData\\Roaming\\firebase\\oscaramallen_gmail_com_application_default_credentials.json"}}
+[debug] [2025-07-15T03:03:32.068Z] Checked if tokens are valid: true, expires at: 1752551961687
+[debug] [2025-07-15T03:03:32.068Z] Checked if tokens are valid: true, expires at: 1752551961687
+[debug] [2025-07-15T03:03:32.068Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/accis-c376c/adminSdkConfig [none]
+[debug] [2025-07-15T03:03:32.370Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/accis-c376c/adminSdkConfig 200
+[debug] [2025-07-15T03:03:32.371Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/accis-c376c/adminSdkConfig {"projectId":"accis-c376c","storageBucket":"accis-c376c.firebasestorage.app"}
+[info] i  functions: Watching "C:\Users\oscar\Documents\OMX\accis\functions" for Cloud Functions... {"metadata":{"emulator":{"name":"functions"},"message":"Watching \"C:\\Users\\oscar\\Documents\\OMX\\accis\\functions\" for Cloud Functions..."}}
+[debug] [2025-07-15T03:03:32.387Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-07-15T03:03:33.027Z] > [functions] package.json contents: {
+  "name": "accis-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^4.4.1",
+    "geokdbush": "^1.1.0",
+    "kdbush": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/geokdbush": "^1.1.5",
+    "typescript": "^5.0.0"
+  }
+}
+[debug] [2025-07-15T03:03:33.028Z] Building nodejs source
+[debug] [2025-07-15T03:03:33.028Z] Failed to find version of module node: reached end of search path C:\Users\oscar\Documents\OMX\accis\functions\node_modules
+[warn] !  functions: Your requested "node" version "18" doesn't match your global version "22". Using node@22 from host. 
+[info] i  functions: You are using a version of firebase-functions SDK (4.9.0) that does not have support for the newest Firebase Extensions features. Please update firebase-functions SDK to >=5.1.0 to use them correctly 
+[debug] [2025-07-15T03:03:33.029Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-07-15T03:03:33.034Z] Found firebase-functions binary at 'C:\Users\oscar\Documents\OMX\accis\functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8838
+
+[error] Error: ENOENT: no such file or directory, open 'C:\Users\oscar\Documents\OMX\accis\functions\data\zipcodes.json.gz'
+    at Object.openSync (node:fs:561:18)
+    at readFileSync (node:fs:445:35)
+    at file:///C:/Users/oscar/Documents/OMX/accis/functions/lib/index.js:13:24
+    at ModuleJobSync.runSync (node:internal/modules/esm/module_job:436:37)
+    at ModuleLoader.importSyncForRequire (node:internal/modules/esm/loader:427:47)
+    at loadESMFromCJS (node:internal/modules/cjs/loader:1561:24)
+    at Module._compile (node:internal/modules/cjs/loader:1712:5)
+    at Object..js (node:internal/modules/cjs/loader:1895:10)
+    at Module.load (node:internal/modules/cjs/loader:1465:32)
+    at Function._load (node:internal/modules/cjs/loader:1282:12) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\oscar\\Documents\\OMX\\accis\\functions\\data\\zipcodes.json.gz'
+}
+
+[debug] [2025-07-15T03:03:38.038Z] Got response code 400; body Failed to generate manifest from function source: Error: ENOENT: no such file or directory, open 'C:\Users\oscar\Documents\OMX\accis\functions\data\zipcodes.json.gz'
+[error] !!  functions: Failed to load function definition from source: FirebaseError: Functions codebase could not be analyzed successfully. It may have a syntax or runtime error {"metadata":{"emulator":{"name":"functions"},"message":"Failed to load function definition from source: FirebaseError: Functions codebase could not be analyzed successfully. It may have a syntax or runtime error"}}
+[debug] [2025-07-15T03:03:42.061Z] Could not find VSCode notification endpoint: FetchError: request to http://localhost:40001/vscode/notify failed, reason: . If you are not running the Firebase Data Connect VSCode extension, this is expected and not an issue.
+[info] 
+┌─────────────────────────────────────────────────────────────┐
+│ ✔  All emulators ready! It is now safe to connect your app. │
+│ i  View Emulator UI at http://127.0.0.1:4000/               │
+└─────────────────────────────────────────────────────────────┘
+
+┌───────────┬────────────────┬─────────────────────────────────┐
+│ Emulator  │ Host:Port      │ View in Emulator UI             │
+├───────────┼────────────────┼─────────────────────────────────┤
+│ Functions │ 127.0.0.1:5001 │ http://127.0.0.1:4000/functions │
+└───────────┴────────────────┴─────────────────────────────────┘
+  Emulator Hub host: 127.0.0.1 port: 4400
+  Other reserved ports: 4500
+
+Issues? Report them at https://github.com/firebase/firebase-tools/issues and attach the *-debug.log files.
+ 
