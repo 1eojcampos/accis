@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { printerAPI } from '@/lib/api'
+import { isValidZipCode, formatZipCode } from '@/lib/zipcode'
 import { 
   MapPin, 
   Star, 
@@ -32,7 +33,7 @@ interface Provider {
   reviewCount: number
   isAvailable: boolean
   profileImage: string
-  location: string
+  location: string  // ZIP code for the provider's location
 }
 
 const printerTypes = ['FDM', 'SLA', 'SLS'] as const
@@ -48,8 +49,49 @@ export default function ProviderDiscovery() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)
   const [locationFilter, setLocationFilter] = useState('')
+  const [zipCodeError, setZipCodeError] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [customerZipCode, setCustomerZipCode] = useState('')
+  const [customerZipError, setCustomerZipError] = useState('')
 
-  // Fetch providers from API
+  // Handle ZIP code input with validation
+  const handleZipCodeChange = (value: string) => {
+    const formatted = formatZipCode(value)
+    setLocationFilter(formatted)
+    
+    if (formatted.length > 0 && formatted.length < 5) {
+      setZipCodeError('ZIP code must be 5 digits')
+    } else if (formatted.length === 5 && !isValidZipCode(formatted)) {
+      setZipCodeError('Invalid ZIP code format')
+    } else {
+      setZipCodeError('')
+    }
+  }
+
+  // Handle customer ZIP code input with validation
+  const handleCustomerZipCodeChange = (value: string) => {
+    const formatted = formatZipCode(value)
+    setCustomerZipCode(formatted)
+    
+    if (formatted.length > 0 && formatted.length < 5) {
+      setCustomerZipError('ZIP code must be 5 digits')
+    } else if (formatted.length === 5 && !isValidZipCode(formatted)) {
+      setCustomerZipError('Invalid ZIP code format')
+    } else {
+      setCustomerZipError('')
+    }
+  }
+
+  // Calculate distance between two ZIP codes (mock implementation)
+  const calculateDistance = (zipCode1: string, zipCode2: string): number => {
+    if (!zipCode1 || !zipCode2 || zipCode1 === zipCode2) return 0
+    
+    // TODO: Replace with actual ZIP proximity service
+    // For now, return a mock distance based on ZIP code difference
+    const diff = Math.abs(parseInt(zipCode1) - parseInt(zipCode2))
+    const mockDistance = Math.min(25, diff / 1000 + Math.random() * 5)
+    return Math.round(mockDistance * 10) / 10 // Round to 1 decimal place
+  }
   useEffect(() => {
     const fetchProviders = async () => {
       try {
@@ -60,28 +102,66 @@ export default function ProviderDiscovery() {
           localStorage.setItem('token', 'test-token');
         }
         
-        const response = await printerAPI.getAll(locationFilter || undefined)
+        // Only fetch if we have a valid ZIP code or no filter
+        if (locationFilter && (!isValidZipCode(locationFilter) || locationFilter.length !== 5)) {
+          setProviders([])
+          setLoading(false)
+          return
+        }
         
-        // Transform API data to match Provider interface
-        const transformedProviders = response.data.map((printer: any) => ({
+        const response = await printerAPI.getAll()
+          // Transform API data to match Provider interface
+        let transformedProviders = response.data.map((printer: any) => ({
           id: printer.id,
           name: printer.name || printer.printerModel || 'Unnamed Printer',
-          printerType: printer.printerType || 'FDM',
-          printerModel: printer.printerModel || 'Unknown Model',
-          materials: printer.materials || ['PLA'],
+          printerType: printer.printerType || printer.technology || 'FDM',
+          printerModel: printer.printerModel || printer.model || 'Unknown Model',
+          materials: printer.materials || printer.supportedMaterials || ['PLA'],
           hourlyRate: printer.hourlyRate || 50,
-          distance: Math.random() * 10, // TODO: Calculate actual distance
+          distance: 0, // Will be calculated below
           rating: printer.rating || 4.5,
           reviewCount: printer.reviewCount || 0,
-          isAvailable: printer.isActive !== false,
+          isAvailable: printer.isActive !== false && printer.available !== false,
           profileImage: '/api/placeholder/64/64',
-          location: printer.location || 'Unknown Location'
+          location: printer.location || 'No ZIP code set'
         }))
+
+        // Calculate distances if customer ZIP code is provided
+        if (customerZipCode && isValidZipCode(customerZipCode)) {
+          transformedProviders = transformedProviders.map((provider: Provider) => ({
+            ...provider,
+            distance: calculateDistance(customerZipCode, provider.location)
+          }))
+        } else {
+          // No customer ZIP, set default distances
+          transformedProviders = transformedProviders.map((provider: Provider) => ({
+            ...provider,
+            distance: 0 // Show 0 distance when no customer location
+          }))
+        }
+
+        // If we have a location filter (search by area), filter by that ZIP code area
+        if (locationFilter && isValidZipCode(locationFilter)) {
+          // Filter providers within the search radius of the location filter
+          transformedProviders = transformedProviders
+            .filter((provider: Provider) => {
+              if (provider.location === locationFilter) return true
+              if (!customerZipCode) return true // If no customer location, show all
+              
+              // Calculate distance from location filter to provider
+              const filterDistance = calculateDistance(locationFilter, provider.location)
+              return filterDistance <= distanceRadius[0]
+            })
+        }
+
+        // Sort by distance if we have customer location
+        if (customerZipCode && isValidZipCode(customerZipCode)) {
+          transformedProviders.sort((a: Provider, b: Provider) => a.distance - b.distance)
+        }
         
         setProviders(transformedProviders)
       } catch (error) {
         console.error('Error fetching providers:', error)
-        // Keep providers empty on error
         setProviders([])
       } finally {
         setLoading(false)
@@ -89,7 +169,7 @@ export default function ProviderDiscovery() {
     }
 
     fetchProviders()
-  }, [locationFilter])
+  }, [locationFilter, distanceRadius, customerZipCode])
 
   const togglePrinterType = (type: string) => {
     setSelectedPrinterTypes(prev => 
@@ -111,9 +191,17 @@ export default function ProviderDiscovery() {
     const typeMatch = selectedPrinterTypes.length === 0 || selectedPrinterTypes.includes(provider.printerType)
     const materialMatch = selectedMaterials.length === 0 || selectedMaterials.some(mat => provider.materials.includes(mat))
     const priceMatch = provider.hourlyRate >= priceRange[0] && provider.hourlyRate <= priceRange[1]
-    const distanceMatch = provider.distance <= distanceRadius[0]
     
-    return typeMatch && materialMatch && priceMatch && distanceMatch
+    // Only apply distance filter if we have customer location
+    const distanceMatch = !customerZipCode || !isValidZipCode(customerZipCode) || provider.distance <= distanceRadius[0]
+    
+    const searchMatch = searchTerm === '' || (
+      provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      provider.printerModel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      provider.materials.some(material => material.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    
+    return typeMatch && materialMatch && priceMatch && distanceMatch && searchMatch
   })
 
   const renderStars = (rating: number) => {
@@ -140,22 +228,55 @@ export default function ProviderDiscovery() {
             Find Local 3D Printing Services
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Discover professional 3D printing providers in your area. Compare prices, capabilities, and availability to find the perfect match for your project.
+            Discover professional 3D printing providers in your area. Enter your ZIP code to find nearby services and compare prices, capabilities, and availability.
           </p>
+        </div>
+
+        {/* Customer Location Input */}
+        <div className="max-w-md mx-auto mb-8">
+          <div className="text-center mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-2">Your Location</h2>
+            <p className="text-sm text-muted-foreground">Enter your ZIP code to calculate distances and find nearby providers</p>
+          </div>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Your ZIP code (e.g., 10001)"
+              value={customerZipCode}
+              onChange={(e) => handleCustomerZipCodeChange(e.target.value)}
+              maxLength={5}
+              className="pl-10 text-center"
+            />
+          </div>
+          {customerZipError && (
+            <p className="text-sm text-red-500 mt-1 text-center">{customerZipError}</p>
+          )}
+          {customerZipCode && isValidZipCode(customerZipCode) && (
+            <p className="text-sm text-green-600 mt-1 text-center">✓ Location set - distances will be calculated from {customerZipCode}</p>
+          )}
         </div>
 
         {/* Location Search */}
         <div className="max-w-md mx-auto mb-8">
+          <div className="text-center mb-4">
+            <h3 className="text-md font-medium text-foreground mb-1">Filter by Provider Area (Optional)</h3>
+            <p className="text-xs text-muted-foreground">Search for providers in a specific ZIP code area</p>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               type="text"
-              placeholder="Search by location (e.g., Downtown, Tech Hub, City)"
+              placeholder="Provider area ZIP code (e.g., 90210)"
               value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
+              onChange={(e) => handleZipCodeChange(e.target.value)}
+              maxLength={5}
               className="pl-10"
             />
           </div>
+          {zipCodeError && (
+            <p className="text-sm text-red-500 mt-1 text-center">{zipCodeError}</p>
+          )}
         </div>
 
         {/* Controls */}
@@ -197,7 +318,9 @@ export default function ProviderDiscovery() {
           {/* Search */}
           <div className="flex-1 max-w-md">
             <Input
-              placeholder="Search by provider name or location..."
+              placeholder="Search by provider name or printer model..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full"
             />
           </div>
@@ -273,6 +396,7 @@ export default function ProviderDiscovery() {
                 <div>
                   <label className="text-sm font-medium text-foreground mb-3 block">
                     Distance Radius ({distanceRadius[0]} miles)
+                    {!customerZipCode && <span className="text-xs text-muted-foreground block font-normal">Enter your ZIP code to use distance filtering</span>}
                   </label>
                   <Slider
                     value={distanceRadius}
@@ -281,6 +405,7 @@ export default function ProviderDiscovery() {
                     min={1}
                     step={1}
                     className="w-full"
+                    disabled={!customerZipCode || !isValidZipCode(customerZipCode)}
                   />
                 </div>
               </div>
@@ -291,7 +416,11 @@ export default function ProviderDiscovery() {
         {/* Results Count */}
         <div className="mb-6">
           <p className="text-muted-foreground">
-            {loading ? 'Loading providers...' : `Found ${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} in your area`}
+            {loading ? 'Loading providers...' : 
+             customerZipCode && isValidZipCode(customerZipCode)
+               ? `Found ${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} within ${distanceRadius[0]} miles of ${customerZipCode}${locationFilter ? ` in area ${locationFilter}` : ''}`
+               : `Found ${filteredProviders.length} provider${filteredProviders.length !== 1 ? 's' : ''} - Enter your ZIP code to see distances and enable location filtering`
+            }
           </p>
         </div>
 
@@ -360,7 +489,12 @@ export default function ProviderDiscovery() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Distance</span>
-                      <span className="text-sm text-foreground">{provider.distance} miles</span>
+                      <span className="text-sm text-foreground">
+                        {customerZipCode && isValidZipCode(customerZipCode) 
+                          ? `${provider.distance} miles`
+                          : 'Enter your ZIP code'
+                        }
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Rating</span>
@@ -408,12 +542,17 @@ export default function ProviderDiscovery() {
         )}
 
         {/* No Results */}
-        {filteredProviders.length === 0 && (
+        {!loading && filteredProviders.length === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-lg font-semibold text-foreground mb-2">No providers found</h3>
-              <p className="text-muted-foreground">Try adjusting your filters to find more providers in your area.</p>
+              <p className="text-muted-foreground">
+                {locationFilter 
+                  ? `No providers found near ZIP code ${locationFilter}. Try expanding your distance radius or entering a different ZIP code.`
+                  : 'Enter a ZIP code to find providers in your area, or try adjusting your filters.'
+                }
+              </p>
             </CardContent>
           </Card>
         )}

@@ -29,7 +29,7 @@ interface Printer {
   supportedMaterials: string[];
   hourlyRate: number;
   available: boolean;
-  location: string;
+  location: string;  // ZIP code for the printer's location
   description: string;
   condition: 'Excellent' | 'Good' | 'Fair' | 'Needs Maintenance';
   createdAt: string;  // ISO string of when the printer was added
@@ -64,7 +64,7 @@ export const ManagePrinters = () => {
     supportedMaterials: [],
     hourlyRate: 0,
     available: true,
-    location: '',
+    location: '',  // ZIP code
     description: '',
     condition: 'Excellent'
   };
@@ -99,7 +99,7 @@ export const ManagePrinters = () => {
         }
         
         const response = await printerAPI.getMyPrinters();
-        const printersData = response.data.map((data: any) => ({
+        const printersData = response.data.data.map((data: any) => ({
           id: data.id,
           userId: data.ownerId || data.userId || 'unknown',
           name: data.name || 'Unnamed Printer',
@@ -109,7 +109,7 @@ export const ManagePrinters = () => {
           supportedMaterials: data.materials || data.supportedMaterials || [],
           hourlyRate: data.hourlyRate || 0,
           available: data.isActive !== false && (data.available !== false),
-          location: data.location || 'No location set',
+          location: data.location || 'No ZIP code set',
           description: data.description || '',
           condition: data.condition || 'Good',
           createdAt: data.createdAt || new Date().toISOString(),
@@ -140,7 +140,7 @@ export const ManagePrinters = () => {
 
   // Modified handleSaveAdd to use API
   const handleSaveAdd = async (data: Partial<Printer>) => {
-    if (data.name && data.model && data.location) {
+    if (data.name && data.model && data.location && data.location.length === 5) {
       try {
         const printerData = {
           name: data.name,
@@ -183,7 +183,7 @@ export const ManagePrinters = () => {
 
   // Modified handleSaveEdit to use API
   const handleSaveEdit = async (data: Partial<Printer>) => {
-    if (editingPrinter && data.name && data.model && data.location) {
+    if (editingPrinter && data.name && data.model && data.location && data.location.length === 5) {
       try {
         const printerData = {
           name: data.name,
@@ -442,13 +442,22 @@ export const ManagePrinters = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Location & Details</h3>
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location">ZIP Code</Label>
                 <Input
                   id="location"
                   value={localFormData.location || ''}
-                  onChange={(e) => setLocalFormData({ ...localFormData, location: e.target.value })}
-                  placeholder="e.g., Downtown, Tech Hub, Creative District"
+                  onChange={(e) => {
+                    // Only allow numeric input for ZIP codes
+                    const value = e.target.value.replace(/\D/g, '').slice(0, 5);
+                    setLocalFormData({ ...localFormData, location: value });
+                  }}
+                  placeholder="e.g., 90210"
+                  maxLength={5}
+                  pattern="[0-9]{5}"
                 />
+                {localFormData.location && localFormData.location.length !== 5 && (
+                  <p className="text-sm text-red-500">ZIP code must be 5 digits</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
@@ -662,7 +671,7 @@ export const ManagePrinters = () => {
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
-                      Location
+                      ZIP Code
                     </h4>
                     <p className="text-sm">{printer.location}</p>
                   </div>

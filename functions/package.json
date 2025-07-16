@@ -1,0 +1,23 @@
+{
+  "name": "accis-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^4.4.1",
+    "geokdbush": "^1.1.0",
+    "kdbush": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/geokdbush": "^1.1.5",
+    "typescript": "^5.0.0"
+  }
+}
