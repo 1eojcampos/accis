@@ -36,7 +36,7 @@ const sections = [
   },
 ]
 
-function classNames(...classes) {
+function classNames(...classes: (string | boolean | undefined | null)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
@@ -89,13 +89,13 @@ export default function WithComparisonTableOnDark() {
                   <li key={section.name}>
                     <ul role="list" className="space-y-4">
                       {section.features.map((feature) =>
-                        feature.tiers[tier.name] ? (
+                        feature.tiers[tier.name as keyof typeof feature.tiers] ? (
                           <li key={feature.name} className="flex gap-x-3">
                             <CheckIcon aria-hidden="true" className="h-6 w-5 flex-none text-indigo-400" />
                             <span>
                               {feature.name}{' '}
-                              {typeof feature.tiers[tier.name] === 'string' ? (
-                                <span className="text-sm/6 text-gray-400">({feature.tiers[tier.name]})</span>
+                              {typeof feature.tiers[tier.name as keyof typeof feature.tiers] === 'string' ? (
+                                <span className="text-sm/6 text-gray-400">({feature.tiers[tier.name as keyof typeof feature.tiers]})</span>
                               ) : null}
                             </span>
                           </li>
@@ -189,18 +189,18 @@ export default function WithComparisonTableOnDark() {
                         </th>
                         {tiers.map((tier) => (
                           <td key={tier.id} className="px-6 py-4 xl:px-8">
-                            {typeof feature.tiers[tier.name] === 'string' ? (
-                              <div className="text-center text-sm/6 text-gray-300">{feature.tiers[tier.name]}</div>
+                            {typeof feature.tiers[tier.name as keyof typeof feature.tiers] === 'string' ? (
+                              <div className="text-center text-sm/6 text-gray-300">{feature.tiers[tier.name as keyof typeof feature.tiers]}</div>
                             ) : (
                               <>
-                                {feature.tiers[tier.name] === true ? (
+                                {feature.tiers[tier.name as keyof typeof feature.tiers] === true ? (
                                   <CheckIcon aria-hidden="true" className="mx-auto size-5 text-indigo-400" />
                                 ) : (
                                   <MinusIcon aria-hidden="true" className="mx-auto size-5 text-gray-500" />
                                 )}
 
                                 <span className="sr-only">
-                                  {feature.tiers[tier.name] === true ? 'Included' : 'Not included'} in {tier.name}
+                                  {feature.tiers[tier.name as keyof typeof feature.tiers] === true ? 'Included' : 'Not included'} in {tier.name}
                                 </span>
                               </>
                             )}

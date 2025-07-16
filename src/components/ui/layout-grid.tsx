@@ -1,11 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type Card = {
   id: number;
-  content: JSX.Element | React.ReactNode | string;
+  content: React.ReactNode;
   className: string;
   thumbnail: string;
 };

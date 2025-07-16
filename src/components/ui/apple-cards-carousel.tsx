@@ -12,12 +12,12 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion } from "framer-motion";
 import Image, { ImageProps } from "next/image";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 
 interface CarouselProps {
-  items: JSX.Element[];
+  items: React.ReactElement[];
   initialScroll?: number;
 }
 
@@ -121,7 +121,7 @@ export const Carousel = ({ items, initialScroll = 0 }: CarouselProps) => {
                     duration: 0.5,
                     delay: 0.2 * index,
                     ease: "easeOut",
-                    once: true,
+                    type: "spring",
                   },
                 }}
                 key={"card" + index}
@@ -164,6 +164,7 @@ export const Card = ({
 }) => {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const safeContainerRef = containerRef as React.RefObject<HTMLDivElement>;
   const { onCardClose, currentIndex } = useContext(CarouselContext);
 
   useEffect(() => {
@@ -183,7 +184,7 @@ export const Card = ({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
-  useOutsideClick(containerRef, () => handleClose());
+  useOutsideClick(safeContainerRef, () => handleClose());
 
   const handleOpen = () => {
     setOpen(true);

@@ -1,26 +1,40 @@
+"use client";
+import React, { useRef, useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import React, { useEffect, useRef } from "react";
 import { createNoise3D } from "simplex-noise";
 import { motion } from "motion/react";
 
-interface VortexProps {
-  children?: any;
+type VortexProps = {
+  particleCount?: number;
   className?: string;
   containerClassName?: string;
-  particleCount?: number;
+  maxMass?: number;
+  minMass?: number;
+  mouseSize?: number;
+  mouseMass?: number;
+  mousePush?: boolean;
+  mousePull?: boolean;
+  tailLength?: number;
+  enableTails?: boolean;
+  particleSize?: number;
+  sizeScale?: number;
+  speedScale?: number;
+  backgroundColor?: string;
+  particleColor?: string;
+  particleOpacity?: number;
   rangeY?: number;
-  baseHue?: number;
   baseSpeed?: number;
   rangeSpeed?: number;
   baseRadius?: number;
   rangeRadius?: number;
-  backgroundColor?: string;
-}
+  baseHue?: number;
+  children?: React.ReactNode;
+};
 
-export const Vortex = (props: VortexProps) => {
+export const Vortex: React.FC<VortexProps> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef(null);
-  const animationFrameId = useRef<number>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const animationFrameId = useRef<number | null>(null);
   const particleCount = props.particleCount || 700;
   const particlePropCount = 9;
   const particlePropsLength = particleCount * particlePropCount;

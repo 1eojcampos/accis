@@ -5,15 +5,16 @@ import {
   useScroll,
   useSpring,
   useTransform,
-} from "motion/react";
+  type Transition,
+} from "framer-motion";
 
 const MovingLine = () => {
-  const transition = {
+  const transition: Transition = {
     duration: 14,
-    ease: "easeInOut",
+    ease: [0.43, 0.13, 0.23, 0.96],
   };
 
-  const ref = useRef<any>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   // Track scroll progress, lies between 0 and 1.
   const { scrollYProgress } = useScroll({
@@ -27,7 +28,7 @@ const MovingLine = () => {
   const PATH = "M0.5 0.980671L0.5 1566.02";
   return (
     <div
-      className="max-w-4xl mx-auto flex flex-row space-x-10 items-start w-full "
+      className="max-w-4xl mx-auto flex flex-row space-x-10 items-start w-full"
       ref={ref}
     >
       <svg
@@ -48,12 +49,11 @@ const MovingLine = () => {
             y2="1566.02"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stop-color="#3879E7" stop-opacity="0" />
-            <stop offset="1" stop-color="#3879E7" />
+            <stop stopColor="#3879E7" stopOpacity="0" />
+            <stop offset="1" stopColor="#3879E7" />
           </linearGradient>
         </defs>
         <motion.path
-          // animatng pathLength value, goes from 1 to 0
           style={{
             pathLength: useSpring(pathLengthValue, {
               stiffness: 500,
@@ -64,7 +64,7 @@ const MovingLine = () => {
           d={PATH}
           stroke="var(--blue-500)"
           strokeOpacity="1"
-          strokeLinecap={"round"}
+          strokeLinecap="round"
           strokeWidth="3"
         />
       </svg>

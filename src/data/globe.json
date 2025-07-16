@@ -1,0 +1,115 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "United States",
+        "value": 100
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-95.7129, 37.0902]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "United Kingdom",
+        "value": 80
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-0.1278, 51.5074]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Germany",
+        "value": 75
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [10.4515, 51.1657]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "France",
+        "value": 70
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [2.2137, 46.2276]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Japan",
+        "value": 90
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [138.2529, 36.2048]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Australia",
+        "value": 65
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [133.7751, -25.2744]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Brazil",
+        "value": 60
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-51.9253, -14.2350]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "China",
+        "value": 95
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [104.1954, 35.8617]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "India",
+        "value": 85
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [78.9629, 20.5937]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Canada",
+        "value": 70
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-106.3468, 56.1304]
+      }
+    }
+  ]
+}

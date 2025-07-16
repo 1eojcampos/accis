@@ -1,28 +1,25 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-
-import { motion } from "motion/react";
+import React, { useState, useEffect, ElementType } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type Direction = "TOP" | "LEFT" | "BOTTOM" | "RIGHT";
+
+interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  containerClassName?: string;
+  className?: string;
+  duration?: number;
+  clockwise?: boolean;
+}
 
 export function HoverBorderGradient({
   children,
   containerClassName,
   className,
-  as: Tag = "button",
   duration = 1,
   clockwise = true,
   ...props
-}: React.PropsWithChildren<
-  {
-    as?: React.ElementType;
-    containerClassName?: string;
-    className?: string;
-    duration?: number;
-    clockwise?: boolean;
-  } & React.HTMLAttributes<HTMLElement>
->) {
+}: Props) {
   const [hovered, setHovered] = useState<boolean>(false);
   const [direction, setDirection] = useState<Direction>("TOP");
 
@@ -56,8 +53,8 @@ export function HoverBorderGradient({
     }
   }, [hovered]);
   return (
-    <Tag
-      onMouseEnter={(event: React.MouseEvent<HTMLDivElement>) => {
+    <button
+      onMouseEnter={(event: React.MouseEvent<HTMLButtonElement>) => {
         setHovered(true);
       }}
       onMouseLeave={() => setHovered(false)}
@@ -94,6 +91,6 @@ export function HoverBorderGradient({
         transition={{ ease: "linear", duration: duration ?? 1 }}
       />
       <div className="bg-black absolute z-1 flex-none inset-[2px] rounded-[100px]" />
-    </Tag>
+    </button>
   );
 }

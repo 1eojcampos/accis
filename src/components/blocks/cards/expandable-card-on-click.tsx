@@ -55,9 +55,9 @@ export function ExpandableCardOnClick() {
   ];
   const [active, setActive] = useState<null | (typeof items)[number]>(null);
 
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
 
-  useOutsideClick(ref, () => {
+  useOutsideClick(ref as React.RefObject<HTMLDivElement>, () => {
     setActive(null);
   });
 

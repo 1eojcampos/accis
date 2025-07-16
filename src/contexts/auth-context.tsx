@@ -10,8 +10,8 @@ import {
   sendPasswordResetEmail,
   sendEmailVerification,
   updateProfile,
-  User
 } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '@/lib/firebase/config';
 import { useRouter } from 'next/navigation';
