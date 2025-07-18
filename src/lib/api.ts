@@ -53,4 +53,36 @@ export const printerAPI = {
   delete: (id: string) => api.delete(`/printers/${id}`)
 };
 
+// Order/Request API functions
+export const orderAPI = {
+  // Create a new order
+  create: (orderData: any) => api.post('/requests', orderData),
+  
+  // Get orders for customer
+  getMyOrders: () => api.get('/requests/my-requests'),
+  
+  // Get available orders for providers to accept
+  getAvailableOrders: (location?: string) => {
+    const params = location ? { location } : {};
+    return api.get('/requests/available', { params });
+  },
+  
+  // Get orders assigned to provider
+  getProviderOrders: () => api.get('/requests/provider-orders'),
+  
+  // Accept/reject order (provider action)
+  respondToOrder: (orderId: string, action: 'accept' | 'reject', notes?: string) => 
+    api.put(`/requests/${orderId}/respond`, { action, notes }),
+  
+  // Update order status
+  updateStatus: (orderId: string, status: string, notes?: string) => 
+    api.put(`/requests/${orderId}/status`, { status, notes }),
+  
+  // Upload files for order
+  uploadFiles: (orderId: string, files: FormData) => 
+    api.post(`/requests/${orderId}/files`, files, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+};
+
 export default api;
