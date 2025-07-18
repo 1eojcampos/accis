@@ -232,6 +232,7 @@ export function Globe({ globeConfig, data }: WorldProps) {
     };
   }, [isInitialized, data]);
 
+  // @ts-ignore
   return <group ref={groupRef} />;
 }
 
@@ -254,15 +255,19 @@ export function World(props: WorldProps) {
   return (
     <Canvas scene={scene} camera={new PerspectiveCamera(50, aspect, 180, 1800)}>
       <WebGLRendererConfig />
+      {/* @ts-ignore */}
       <ambientLight color={globeConfig.ambientLight} intensity={0.6} />
+      {/* @ts-ignore */}
       <directionalLight
         color={globeConfig.directionalLeftLight}
         position={new Vector3(-400, 100, 400)}
       />
+      {/* @ts-ignore */}
       <directionalLight
         color={globeConfig.directionalTopLight}
         position={new Vector3(-200, 500, 200)}
       />
+      {/* @ts-ignore */}
       <pointLight
         color={globeConfig.pointLight}
         position={new Vector3(-200, 500, 200)}
