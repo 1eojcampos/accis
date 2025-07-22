@@ -9,6 +9,7 @@ import ProviderDiscovery from "@/components/blocks/provider-discovery"
 import OrderTracking from "@/components/blocks/order-tracking"
 import { ManagePrinters } from "@/components/blocks/manage-printers"
 import { ManageRequestsComponent } from "@/components/blocks/manage-requests"
+import ProviderOrdersManagement from "@/components/blocks/provider-orders-management"
 import { CenteredWithLogo } from "@/components/blocks/footers/centered-with-logo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -544,6 +545,11 @@ export default function HomePage() {
                 <p className="text-lg text-muted-foreground">
                   Manage your 3D printing services, track orders, and view earnings.
                 </p>
+              </div>
+              
+              {/* Provider Orders Management */}
+              <div className="mb-8">
+                <ProviderOrdersManagement />
               </div>
               
               {/* Provider Stats */}

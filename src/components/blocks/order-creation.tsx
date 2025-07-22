@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search } from "lucide-react"
+import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search, CheckCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { orderAPI } from "@/lib/api"
 
 const steps = [
   { id: 1, title: "Upload Model", icon: Upload, description: "Add your 3D files" },
@@ -41,6 +43,10 @@ export default function OrderCreation() {
   const [requirements, setRequirements] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<string[]>([])
+  const [location, setLocation] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
 
   const generateExternalLinks = (query: string) => {
     const encodedQuery = encodeURIComponent(query)
@@ -135,6 +141,61 @@ export default function OrderCreation() {
       case 3: return true
       case 4: return true
       default: return false
+    }
+  }
+
+  const handleSubmitOrder = async () => {
+    if (!selectedMaterial || !selectedQuality || files.length === 0) {
+      setSubmitError("Please complete all required fields")
+      return
+    }
+
+    setIsSubmitting(true)
+    setSubmitError(null)
+    
+    try {
+      const estimate = calculateEstimate()
+      
+      // Convert files to a format suitable for API
+      const fileData = files.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      }))
+
+      const orderData = {
+        files: fileData,
+        material: selectedMaterial,
+        quality: selectedQuality,
+        quantity,
+        requirements,
+        location: location || 'Default Location',
+        estimatedCost: estimate.cost,
+        estimatedTimeline: estimate.timeline
+      }
+
+      const response = await orderAPI.create(orderData)
+      
+      if (response.status === 201) {
+        setSubmitSuccess(true)
+        // Reset form after successful submission
+        setTimeout(() => {
+          setFiles([])
+          setSelectedMaterial("")
+          setSelectedQuality("")
+          setQuantity(1)
+          setRequirements("")
+          setLocation("")
+          setCurrentStep(1)
+          setSubmitSuccess(false)
+        }, 3000)
+      }
+    } catch (error: any) {
+      console.error('Order submission error:', error)
+      setSubmitError(error.response?.data?.error || "Failed to submit order. Please try again.")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -419,18 +480,31 @@ export default function OrderCreation() {
                 {/* Step 3: Requirements */}
                 {currentStep === 3 && (
                   <div className="space-y-4">
-                    <Label className="text-sm font-medium text-card-foreground font-[var(--font-display)]">
-                      Special Requirements (Optional)
-                    </Label>
-                    <Textarea
-                      placeholder="Add any special instructions, color preferences, finishing requirements, or delivery notes..."
-                      value={requirements}
-                      onChange={(e) => setRequirements(e.target.value)}
-                      className="min-h-[120px] bg-input border-border text-card-foreground resize-none font-[var(--font-body)]"
-                    />
-                    <p className="text-xs text-muted-foreground font-[var(--font-body)]">
-                      Provide detailed specifications to help providers deliver exactly what you need.
-                    </p>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-card-foreground font-[var(--font-display)]">
+                        Location (Optional)
+                      </Label>
+                      <Input
+                        placeholder="Enter your location for better provider matching..."
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        className="bg-input border-border text-card-foreground"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-card-foreground font-[var(--font-display)]">
+                        Special Requirements (Optional)
+                      </Label>
+                      <Textarea
+                        placeholder="Add any special instructions, color preferences, finishing requirements, or delivery notes..."
+                        value={requirements}
+                        onChange={(e) => setRequirements(e.target.value)}
+                        className="min-h-[120px] bg-input border-border text-card-foreground resize-none font-[var(--font-body)]"
+                      />
+                      <p className="text-xs text-muted-foreground font-[var(--font-body)]">
+                        Provide detailed specifications to help providers deliver exactly what you need.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -468,24 +542,61 @@ export default function OrderCreation() {
                   </div>
                 )}
 
+                {/* Error/Success Messages */}
+                {submitError && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800">
+                      {submitError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {submitSuccess && (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Order submitted successfully! Providers will be notified and can start responding to your request.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* Navigation */}
                 <div className="flex justify-between pt-6 border-t border-border">
                   <Button
                     variant="outline"
                     onClick={prevStep}
-                    disabled={currentStep === 1}
+                    disabled={currentStep === 1 || isSubmitting}
                     className="border-border text-card-foreground hover:bg-accent/10"
                   >
                     Previous
                   </Button>
                   <Button
-                    onClick={currentStep === 4 ? () => {} : nextStep}
-                    disabled={!canProceed()}
+                    onClick={currentStep === 4 ? handleSubmitOrder : nextStep}
+                    disabled={!canProceed() || isSubmitting}
                     className="bg-accent text-accent-foreground hover:bg-accent/90"
                   >
-                    {currentStep === 4 ? 'Submit Order' : 'Next Step'}
+                    {isSubmitting ? 'Submitting...' : currentStep === 4 ? 'Submit Order' : 'Next Step'}
                   </Button>
                 </div>
+
+                {/* Submit Order Success/Error Message */}
+                {currentStep === 4 && submitError && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertCircle className="w-5 h-5 mr-2" />
+                    <AlertDescription className="text-sm">
+                      {submitError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {currentStep === 4 && submitSuccess && (
+                  <Alert variant="default" className="mt-4">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    <AlertDescription className="text-sm">
+                      Order submitted successfully!.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           </div>
