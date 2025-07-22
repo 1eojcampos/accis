@@ -43,6 +43,7 @@ export default function HomePage() {
   const [notifications] = useState(3)
   const [cartItems] = useState(2)
   const [isLoading, setIsLoading] = useState(true)
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false)
 
   // Check authentication and set initial section
   useEffect(() => {
@@ -123,6 +124,25 @@ export default function HomePage() {
 
     // Cleanup subscription
     return () => unsubscribe();
+  }, [])
+
+  // Handle URL parameters for success messages (client-side only)
+  useEffect(() => {
+    // Only run on client side
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const signup = urlParams.get('signup');
+      const role = urlParams.get('role');
+      
+      if (signup === 'success' && role) {
+        setShowSuccessMessage(true);
+        // Hide the message after 5 seconds
+        const timer = setTimeout(() => {
+          setShowSuccessMessage(false);
+        }, 5000);
+        return () => clearTimeout(timer);
+      }
+    }
   }, [])
 
   // Restricted navigation for logged-out users
@@ -628,6 +648,36 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {renderNavigation()}
+      
+      {/* Success message for OAuth signup */}
+      {showSuccessMessage && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 m-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">
+                🎉 Welcome to ACCIS! Your account has been successfully created. You're now signed in{typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('role') ? ` as a ${new URLSearchParams(window.location.search).get('role')}` : ''}.
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  onClick={() => setShowSuccessMessage(false)}
+                  className="inline-flex bg-green-50 rounded-md p-1.5 text-green-500 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+                >
+                  <span className="sr-only">Dismiss</span>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <main>
         {renderCurrentSection()}
       </main>

@@ -49,9 +49,9 @@ export default function SignUpPage() {
     setError(undefined);
 
     try {
-      // TODO: Replace with your actual Google OAuth flow
-      // Pass the role as a parameter to your OAuth endpoint
-      window.location.href = `/api/auth/google?type=signup&role=${role}`;
+      // Redirect to backend Google OAuth endpoint
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+      window.location.href = `${backendUrl}/auth/google?type=signup&role=${role}`;
     } catch (err) {
       setError('Google sign up failed');
       setLoading(false);

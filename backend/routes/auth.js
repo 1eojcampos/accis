@@ -250,11 +250,38 @@ router.get('/verify-status', authenticateToken, async (req, res) => {
 
 // Google OAuth endpoints
 router.get('/google', (req, res, next) => {
+  console.log('🔍 Google OAuth request received:');
+  console.log('  - Query params:', req.query);
+  console.log('  - Session before:', req.session);
+  
   const { type = 'signin', role = 'customer' } = req.query;
   
   // Store OAuth type and role in session
   req.session.oauthType = type;
   req.session.oauthRole = role;
+  
+  console.log('  - OAuth type:', type);
+  console.log('  - OAuth role:', role);
+  console.log('  - Session after:', req.session);
+  
+  // Check if Google OAuth is configured
+  if (!process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID === 'your-client-id.apps.googleusercontent.com') {
+    console.log('❌ Google OAuth not configured - missing GOOGLE_CLIENT_ID');
+    return res.status(500).json({ 
+      error: 'Google OAuth not configured',
+      message: 'GOOGLE_CLIENT_ID is not set or is using placeholder value'
+    });
+  }
+  
+  if (!process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET === 'your-client-secret') {
+    console.log('❌ Google OAuth not configured - missing GOOGLE_CLIENT_SECRET');
+    return res.status(500).json({ 
+      error: 'Google OAuth not configured',
+      message: 'GOOGLE_CLIENT_SECRET is not set or is using placeholder value'
+    });
+  }
+  
+  console.log('✅ Google OAuth configured, redirecting to Google...');
   
   passport.authenticate('google', {
     scope: ['profile', 'email'],

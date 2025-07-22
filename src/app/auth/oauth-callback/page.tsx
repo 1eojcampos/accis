@@ -18,14 +18,26 @@ export default function OAuthCallbackPage() {
     }
 
     if (token) {
-      // Store the token
-      localStorage.setItem('authToken', token);
-      
-      // Redirect based on role
-      if (role === 'provider') {
-        router.push('/provider/dashboard');
-      } else {
-        router.push('/customer/dashboard');
+      // Decode the token to get user email
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = payload.email;
+        
+        // Store the token with Bearer prefix (consistent with Firebase auth)
+        localStorage.setItem('authToken', `Bearer ${token}`);
+        
+        // Store user data as JSON object (consistent with Firebase auth)
+        localStorage.setItem('user', JSON.stringify({
+          email: email,
+          role: role || 'customer'
+        }));
+        
+        // For now, redirect to home page since dashboard routes don't exist yet
+        // TODO: Create /customer/dashboard and /provider/dashboard routes
+        router.push('/?signup=success&role=' + (role || 'customer'));
+      } catch (error) {
+        console.error('Error processing OAuth token:', error);
+        router.push('/auth/signin?error=invalid_token');
       }
     } else {
       router.push('/auth/signin');
