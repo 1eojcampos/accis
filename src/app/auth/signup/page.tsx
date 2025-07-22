@@ -15,8 +15,12 @@ export default function SignUpPage() {
     setError(undefined);
 
     try {
-      // Call the backend API
-      const response = await fetch('http://localhost:5000/api/auth/signup', {
+      // Call the backend API using the api utility
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/auth/signup`;
+      console.log('🔗 API URL being used:', apiUrl);
+      console.log('🌐 Environment API URL:', process.env.NEXT_PUBLIC_API_URL);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
