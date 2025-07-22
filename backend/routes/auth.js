@@ -297,9 +297,12 @@ router.get('/google/callback',
       const userDoc = await db.collection('users').doc(uid).get();
       const userData = userDoc.data();
       
-      // Redirect to frontend with token and role
+      // Get the OAuth type from session (defaults to signin)
+      const oauthType = req.session?.oauthType || 'signin';
+      
+      // Redirect to frontend with token, role, and type
       res.redirect(`${process.env.FRONTEND_URL}/auth/oauth-callback?` + 
-        `token=${token}&role=${userData.role}`);
+        `token=${token}&role=${userData.role}&type=${oauthType}`);
     } catch (error) {
       console.error('OAuth callback error:', error);
       res.redirect(`${process.env.FRONTEND_URL}/auth/signin?error=oauth_failed`);

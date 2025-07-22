@@ -10,6 +10,7 @@ export default function OAuthCallbackPage() {
   useEffect(() => {
     const token = searchParams.get('token');
     const role = searchParams.get('role');
+    const type = searchParams.get('type'); // signin or signup
     const error = searchParams.get('error');
 
     if (error) {
@@ -32,9 +33,14 @@ export default function OAuthCallbackPage() {
           role: role || 'customer'
         }));
         
-        // For now, redirect to home page since dashboard routes don't exist yet
-        // TODO: Create /customer/dashboard and /provider/dashboard routes
-        router.push('/?signup=success&role=' + (role || 'customer'));
+        // Redirect based on OAuth type
+        if (type === 'signup') {
+          // Show success message for new signups
+          router.push('/?signup=success&role=' + (role || 'customer'));
+        } else {
+          // Just redirect to home for signin (no success message)
+          router.push('/');
+        }
       } catch (error) {
         console.error('Error processing OAuth token:', error);
         router.push('/auth/signin?error=invalid_token');

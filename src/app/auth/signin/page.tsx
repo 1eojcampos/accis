@@ -57,9 +57,9 @@ export default function SignInPage() {
     setError(null);
 
     try {
-      // TODO: Replace with your actual Google OAuth flow
-      // This could redirect to your OAuth endpoint or use a client-side OAuth library
-      window.location.href = '/api/auth/google?type=signin';
+      // Redirect to backend Google OAuth endpoint
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+      window.location.href = `${backendUrl}/auth/google?type=signin`;
     } catch (err) {
       setError('Google sign in failed');
       setLoading(false);
