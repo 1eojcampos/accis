@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search, CheckCircle, AlertCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Slider } from "@/components/ui/slider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { orderAPI } from "@/lib/api"
+
+interface OrderCreationProps {
+  selectedProvider?: any
+  onBack?: () => void
+}
 
 const steps = [
   { id: 1, title: "Upload Model", icon: Upload, description: "Add your 3D files" },
@@ -33,7 +39,7 @@ const qualitySettings = [
   { value: "high", label: "High Quality", description: "Finest detail, longer print time", multiplier: 1.5 }
 ]
 
-export default function OrderCreation() {
+export default function OrderCreation({ selectedProvider, onBack }: OrderCreationProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [files, setFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
@@ -172,7 +178,12 @@ export default function OrderCreation() {
         requirements,
         location: location || 'Default Location',
         estimatedCost: estimate.cost,
-        estimatedTimeline: estimate.timeline
+        estimatedTimeline: estimate.timeline,
+        // Include selected provider information if available
+        ...(selectedProvider && {
+          preferredProviderId: selectedProvider.id,
+          preferredProviderName: selectedProvider.name
+        })
       }
 
       console.log('Submitting order:', orderData)
@@ -223,13 +234,51 @@ export default function OrderCreation() {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-7xl mx-auto">
+        {/* Back Button and Selected Provider */}
+        {onBack && (
+          <div className="mb-6">
+            <Button 
+              variant="outline" 
+              onClick={onBack}
+              className="mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Browse Printers
+            </Button>
+            
+            {selectedProvider && (
+              <Card className="p-4 bg-blue-50 border-blue-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold">
+                    {selectedProvider.name?.charAt(0) || 'P'}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Selected Provider: {selectedProvider.name}</h3>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{selectedProvider.printerType} Printer</span>
+                      <span>${selectedProvider.hourlyRate}/hour</span>
+                      <span>{selectedProvider.distance} miles away</span>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="ml-auto">
+                    ⭐ {selectedProvider.rating}
+                  </Badge>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-foreground mb-4 font-[var(--font-display)]">
             Create Your Order
           </h1>
           <p className="text-lg text-muted-foreground font-[var(--font-body)]">
-            Upload your 3D models and get instant quotes from local providers
+            {selectedProvider 
+              ? `Upload your 3D models to request a quote from ${selectedProvider.name}`
+              : 'Upload your 3D models and get instant quotes from local providers'
+            }
           </p>
         </div>
 

@@ -44,6 +44,7 @@ export default function HomePage() {
   const [cartItems] = useState(2)
   const [isLoading, setIsLoading] = useState(true)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
+  const [selectedProvider, setSelectedProvider] = useState<any>(null)
 
   // Check authentication and set initial section
   useEffect(() => {
@@ -145,7 +146,22 @@ export default function HomePage() {
     }
   }, [])
 
-  // Restricted navigation for logged-out users
+  // Handle provider selection and navigation to order creation
+  const handleProviderSelection = (provider: any) => {
+    if (!userLoggedIn) {
+      window.location.href = '/auth/signin'
+      return
+    }
+    setSelectedProvider(provider)
+    setCurrentSection('create-order')
+  }
+
+  // Navigate back to browse from order creation
+  const handleBackToBrowse = () => {
+    setSelectedProvider(null)
+    setCurrentSection('browse')
+  }
+
   const publicNavigationItems = [
     { 
       key: 'browse' as AppSection, 
@@ -161,13 +177,7 @@ export default function HomePage() {
       key: 'browse' as AppSection, 
       label: 'Browse Printers', 
       icon: Search,
-      description: 'Find local 3D printing providers'
-    },
-    { 
-      key: 'create-order' as AppSection, 
-      label: 'Create Order', 
-      icon: Upload,
-      description: 'Upload your 3D models and get quotes'
+      description: 'Find local 3D printing providers and request quotes'
     },
     { 
       key: 'track-orders' as AppSection, 
@@ -442,14 +452,14 @@ export default function HomePage() {
   const renderCurrentSection = () => {
     switch (currentSection) {
       case 'browse':
-        return <ProviderDiscovery />
+        return <ProviderDiscovery onProviderSelect={handleProviderSelection} />
       case 'create-order':
         // Protect this section - redirect if not logged in
         if (!userLoggedIn) {
           window.location.href = '/auth/signin'
           return null
         }
-        return <OrderCreation />
+        return <OrderCreation selectedProvider={selectedProvider} onBack={handleBackToBrowse} />
       case 'track-orders':
         // Protect this section - redirect if not logged in
         if (!userLoggedIn) {

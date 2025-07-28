@@ -36,10 +36,14 @@ interface Provider {
   location: string  // ZIP code for the provider's location
 }
 
+interface ProviderDiscoveryProps {
+  onProviderSelect?: (provider: Provider) => void
+}
+
 const printerTypes = ['FDM', 'SLA', 'SLS'] as const
 const allMaterials = ['PLA', 'ABS', 'PETG', 'TPU', 'Standard Resin', 'Tough Resin', 'Flexible Resin', 'Nylon PA11', 'Nylon PA12', 'Glass-filled Nylon', 'PVA', 'HIPS', 'Water-washable Resin', 'Carbon Fiber', 'Fiberglass', 'Kevlar', 'Onyx']
 
-export default function ProviderDiscovery() {
+export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscoveryProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid')
   const [selectedPrinterTypes, setSelectedPrinterTypes] = useState<string[]>([])
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([])
@@ -517,6 +521,7 @@ export default function ProviderDiscovery() {
                     <Button 
                       size="sm" 
                       className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                      onClick={() => onProviderSelect?.(provider)}
                     >
                       <MessageSquare className="w-4 h-4 mr-1" />
                       Request Quote
