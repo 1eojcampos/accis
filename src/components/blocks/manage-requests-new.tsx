@@ -415,7 +415,7 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
 };
 
 export const ManageRequestsComponent = () => {
-  const { currentUser, userProfile, updateUserType } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [requests, setRequests] = useState<PrintRequest[]>([]);
   const [myOrders, setMyOrders] = useState<PrintRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -429,25 +429,6 @@ export const ManageRequestsComponent = () => {
   const [quoteNotes, setQuoteNotes] = useState('');
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [acceptingOrder, setAcceptingOrder] = useState<string | null>(null);
-
-  // Debug current user state
-  console.log('🔍 Debug Auth State in ManageRequestsComponent:');
-  console.log('Current User:', currentUser);
-  console.log('User Profile:', userProfile);
-  console.log('User Type:', userProfile?.userType);
-  console.log('User Type is provider?', userProfile?.userType === 'provider');
-
-  const handleSetProviderType = async () => {
-    try {
-      console.log('🔄 Setting user type to provider...');
-      await updateUserType('provider');
-      console.log('✅ User type updated successfully');
-      window.location.reload();
-    } catch (error) {
-      console.error('❌ Error updating user type:', error);
-      toast.error('Failed to update account type');
-    }
-  };
 
   // Load available requests (pending orders with no provider)
   useEffect(() => {
@@ -629,108 +610,14 @@ export const ManageRequestsComponent = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Debug current user state
-  console.log('Current User:', currentUser);
-  console.log('User Profile:', userProfile);
-  console.log('User Type:', userProfile?.userType);
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Please Sign In</h2>
-            <p className="text-muted-foreground">You need to be signed in to access this page.</p>
-            <Button onClick={() => window.location.href = '/auth/signin'} className="mt-4">
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading user profile...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (userProfile.userType !== 'provider') {
+  if (!currentUser || userProfile?.userType !== 'provider') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-            <p className="text-muted-foreground mb-4">
-              This page is only accessible to providers. 
-              {userProfile.userType === null || userProfile.userType === undefined ? 
-                ' You need to select your account type.' : 
-                ` Current account type: "${userProfile.userType}"`}
-            </p>
-            
-            {/* Debug info */}
-            <div className="mb-4 p-3 bg-muted rounded text-left text-xs">
-              <div><strong>Debug Info:</strong></div>
-              <div>Email: {currentUser?.email}</div>
-              <div>UserType: {userProfile.userType || 'null/undefined'}</div>
-              <div>Profile exists: {userProfile ? 'Yes' : 'No'}</div>
-            </div>
-            
-            {(userProfile.userType === null || userProfile.userType === undefined) && (
-              <div className="space-y-2">
-                <Button 
-                  onClick={handleSetProviderType}
-                  className="w-full"
-                >
-                  Set as Provider Account
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/customer/dashboard'}
-                  className="w-full"
-                >
-                  Go to Customer Dashboard
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/debug-auth'}
-                  className="w-full"
-                  size="sm"
-                >
-                  🛠️ Debug Auth Issues
-                </Button>
-              </div>
-            )}
-            
-            {userProfile.userType && userProfile.userType !== 'provider' && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  You're currently set as a {userProfile.userType}.
-                </p>
-                <Button 
-                  onClick={handleSetProviderType}
-                  className="w-full"
-                >
-                  Switch to Provider Account
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/debug-auth'}
-                  className="w-full"
-                  size="sm"
-                >
-                  🛠️ Debug Auth Issues
-                </Button>
-              </div>
-            )}
+            <p className="text-muted-foreground">This page is only accessible to providers.</p>
           </CardContent>
         </Card>
       </div>

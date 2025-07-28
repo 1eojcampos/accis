@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  console.warn('NEXT_PUBLIC_API_URL not set, using default:', API_URL);
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -55,6 +59,12 @@ export const printerAPI = {
 
 // Order/Request API functions
 export const orderAPI = {
+  // Test connection
+  testConnection: () => api.get('/test'),
+  
+  // Test POST endpoint
+  testPost: (data: any) => api.post('/test-request', data),
+  
   // Create a new order
   create: (orderData: any) => api.post('/requests', orderData),
   

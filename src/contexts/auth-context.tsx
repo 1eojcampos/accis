@@ -125,12 +125,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
-    const userDoc = await getDoc(doc(db, 'users', uid));
-    return userDoc.exists() ? userDoc.data() as UserProfile : null;
+    console.log('🔍 Fetching user profile for UID:', uid);
+    
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log('📄 Raw Firestore user data:', userData);
+        
+        // Normalize role field - check both 'userType' and 'role' fields
+        const userType = userData.userType || userData.role || null;
+        console.log('🎭 Determined userType:', userType);
+        
+        const profile: UserProfile = {
+          uid: userData.uid || uid,
+          email: userData.email,
+          displayName: userData.displayName || '',
+          userType: userType,
+          createdAt: userData.createdAt || new Date().toISOString(),
+          emailVerified: userData.emailVerified || false
+        };
+        
+        console.log('✅ Processed user profile:', profile);
+        return profile;
+      } else {
+        console.log('❌ No user document found in Firestore');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error fetching user profile:', error);
+      return null;
+    }
   };
 
   useEffect(() => {
+    console.log('🔄 Setting up auth state listener...');
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('🔐 Auth state changed:', user ? `User ${user.email} signed in` : 'User signed out');
       setCurrentUser(user);
       
       if (user) {
@@ -138,11 +170,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Get the ID token and store it in localStorage
           const token = await user.getIdToken();
           localStorage.setItem('token', token);
+          console.log('💾 Token stored for user:', user.email);
           
           const profile = await getUserProfile(user.uid);
           if (profile) {
+            console.log('✅ User profile loaded from Firestore');
             setUserProfile(profile);
           } else {
+            console.log('🆕 Creating new user profile...');
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email,
@@ -154,27 +189,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             try {
               await setDoc(doc(db, 'users', user.uid), newProfile);
+              console.log('✅ New user profile created in Firestore');
               setUserProfile(newProfile);
             } catch (error) {
-              console.error('Failed to create user profile in Firestore:', error);
+              console.error('❌ Failed to create user profile in Firestore:', error);
               setUserProfile(newProfile);
             }
           }
         } catch (error) {
-          console.error('Error fetching user profile:', error);
-          setUserProfile({
+          console.error('❌ Error in auth state change handler:', error);
+          // Fallback profile
+          const fallbackProfile: UserProfile = {
             uid: user.uid,
             email: user.email,
             displayName: user.displayName || '',
             userType: null,
             createdAt: new Date().toISOString(),
             emailVerified: user.emailVerified
-          });
+          };
+          setUserProfile(fallbackProfile);
         }
       } else {
         setUserProfile(null);
         // Remove token when user logs out
         localStorage.removeItem('token');
+        console.log('🗑️ Token removed - user signed out');
       }
       
       setLoading(false);

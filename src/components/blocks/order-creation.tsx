@@ -175,6 +175,9 @@ export default function OrderCreation() {
         estimatedTimeline: estimate.timeline
       }
 
+      console.log('Submitting order:', orderData)
+      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
+      
       const response = await orderAPI.create(orderData)
       
       if (response.status === 201) {
@@ -193,7 +196,25 @@ export default function OrderCreation() {
       }
     } catch (error: any) {
       console.error('Order submission error:', error)
-      setSubmitError(error.response?.data?.error || "Failed to submit order. Please try again.")
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        method: error.config?.method
+      })
+      
+      let errorMessage = "Failed to submit order. Please try again."
+      
+      if (error.response?.status === 404) {
+        errorMessage = "API endpoint not found. Please check your connection and try again."
+      } else if (error.response?.status === 401) {
+        errorMessage = "Authentication required. Please log in and try again."
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error
+      }
+      
+      setSubmitError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

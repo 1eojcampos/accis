@@ -24,6 +24,7 @@ const corsOptions = {
     'https://accis-c376c.firebaseapp.com', 
     'https://accis.io',
     'http://localhost:3000', 
+    'http://localhost:3001',
     'http://localhost:5000'
   ],
   credentials: true,
@@ -70,6 +71,16 @@ app.get('/api/health', (req, res) => {
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is working!' });
+});
+
+// Debug endpoint for testing request creation
+app.post('/api/test-request', (req, res) => {
+  console.log('Test request received:', req.body);
+  res.status(201).json({ 
+    message: 'Test request endpoint working!',
+    receivedData: req.body,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Try to load routes with error handling
@@ -129,7 +140,7 @@ app.use('*', (req, res) => {
 
 // For local development
 if (process.env.NODE_ENV !== 'production') {
-  const server = app.listen(process.env.SERVER_PORT || 3001, () => {
+  const server = app.listen(process.env.SERVER_PORT || 5000, () => {
     console.log(`
 🚀 ACCIS Backend running on port ${server.address().port}
 📊 Health check: http://localhost:${server.address().port}/api/health
