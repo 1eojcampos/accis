@@ -126,7 +126,7 @@ interface PrintRequest {
   location?: string;
   estimatedCost?: number;
   estimatedTimeline?: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'printing' | 'in-progress' | 'completed' | 'rejected';
+  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'printing' | 'in-progress' | 'completed' | 'rejected';
   providerId?: string;
   providerName?: string;
   providerEmail?: string;
@@ -206,7 +206,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
   const files = getFiles();
   const canPay = order.status === 'quote-submitted' && getQuoteAmount();
-  const isPaid = order.status === 'paid' || order.status === 'printing' || order.status === 'completed';
+  const isPaid = order.status === 'quote-accepted' || order.status === 'printing' || order.status === 'completed';
   const isCompleted = order.status === 'completed';
   const isPrinting = order.status === 'printing';
   const isInProgress = order.status === 'in-progress';
@@ -229,7 +229,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <div className="flex items-center gap-2">
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Received' : 
-               order.status === 'paid' ? 'Payment Confirmed' : 
+               order.status === 'quote-accepted' ? 'Payment Confirmed' : 
                order.status === 'printing' ? 'Being Printed' :
                order.status === 'completed' ? 'Ready for Pickup' :
                order.status}
@@ -670,9 +670,9 @@ export default function OrderTracking() {
     );
   }
 
-  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const requestedCount = orders.filter(o => o.status === 'quote-requested').length;
   const quoteCount = orders.filter(o => o.status === 'quote-submitted').length;
-  const paidCount = orders.filter(o => o.status === 'paid' || o.status === 'in-progress').length;
+  const acceptedCount = orders.filter(o => o.status === 'quote-accepted' || o.status === 'printing' || o.status === 'in-progress').length;
   const completedCount = orders.filter(o => o.status === 'completed').length;
 
   return (
@@ -703,9 +703,9 @@ export default function OrderTracking() {
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-yellow-400" />
-                <span className="text-sm text-muted-foreground">Pending</span>
+                <span className="text-sm text-muted-foreground">Quote Requested</span>
               </div>
-              <p className="text-2xl font-bold text-foreground mt-1">{pendingCount}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{requestedCount}</p>
             </div>
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
@@ -719,7 +719,7 @@ export default function OrderTracking() {
                 <Printer className="w-5 h-5 text-blue-400" />
                 <span className="text-sm text-muted-foreground">In Progress</span>
               </div>
-              <p className="text-2xl font-bold text-foreground mt-1">{paidCount}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{acceptedCount}</p>
             </div>
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">

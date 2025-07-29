@@ -48,7 +48,7 @@ interface PrintOrder {
   requirements?: string;
   location?: string;
   estimatedCost: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'in-progress' | 'completed' | 'rejected';
+  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'printing' | 'in-progress' | 'completed' | 'rejected';
   quoteAmount?: number;
   estimatedDeliveryTime?: string;
   providerNotes?: string;
@@ -93,6 +93,11 @@ export const CustomerDashboardComponent = () => {
         setOrders(ordersData);
         setLoading(false);
         setError(null);
+        
+        // Debug: Log received orders to see their structure
+        console.log('Customer Dashboard - Received orders:', ordersData);
+        const quoteSubmittedOrders = ordersData.filter(o => o.status === 'quote-submitted');
+        console.log('Orders with quote-submitted status:', quoteSubmittedOrders);
       },
       (err) => {
         console.error('Error fetching orders:', err);
@@ -115,7 +120,7 @@ export const CustomerDashboardComponent = () => {
       
       const orderDoc = doc(db, 'printRequests', orderId);
       await updateDoc(orderDoc, {
-        status: 'paid',
+        status: 'quote-accepted',
         paidAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -131,10 +136,10 @@ export const CustomerDashboardComponent = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'accepted': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'quote-requested': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       case 'quote-submitted': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'quote-accepted': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'printing': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
       case 'in-progress': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
       case 'completed': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
@@ -144,10 +149,10 @@ export const CustomerDashboardComponent = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending': return 'Waiting for Provider';
-      case 'accepted': return 'Provider Assigned';
+      case 'quote-requested': return 'Waiting for Quote';
       case 'quote-submitted': return 'Quote Received';
-      case 'paid': return 'Payment Completed';
+      case 'quote-accepted': return 'Quote Accepted';
+      case 'printing': return 'Printing in Progress';
       case 'in-progress': return 'Printing in Progress';
       case 'completed': return 'Order Completed';
       case 'rejected': return 'Order Rejected';
@@ -207,11 +212,13 @@ export const CustomerDashboardComponent = () => {
     );
   }
 
-  const pendingOrders = orders.filter(o => o.status === 'pending').length;
-  const quotesReceived = orders.filter(o => o.status === 'quote-submitted').length;
-  const paidOrders = orders.filter(o => o.status === 'paid' || o.status === 'in-progress' || o.status === 'completed').length;
+  const requestedOrders = orders.filter(o => o.status === 'quote-requested').length;
+  const quotesReceived = orders.filter(o => 
+    o.status === 'quote-submitted'
+  ).length;
+  const paidOrders = orders.filter(o => o.status === 'quote-accepted' || o.status === 'printing' || o.status === 'in-progress' || o.status === 'completed').length;
   const totalSpent = orders
-    .filter(o => o.status === 'paid' || o.status === 'in-progress' || o.status === 'completed')
+    .filter(o => o.status === 'quote-accepted' || o.status === 'printing' || o.status === 'in-progress' || o.status === 'completed')
     .reduce((sum, order) => sum + (order.quoteAmount || order.estimatedCost || 0), 0);
 
   return (
@@ -242,9 +249,9 @@ export const CustomerDashboardComponent = () => {
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-blue-400" />
-                <span className="text-sm text-muted-foreground">Pending Orders</span>
+                <span className="text-sm text-muted-foreground">Requested Quotes</span>
               </div>
-              <p className="text-2xl font-bold text-foreground mt-1">{pendingOrders}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{requestedOrders}</p>
             </div>
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
@@ -375,7 +382,7 @@ export const CustomerDashboardComponent = () => {
                     </div>
                   )}
 
-                  {/* Quote Information */}
+                  {/* Quote Information - Show for quote-submitted orders */}
                   {order.status === 'quote-submitted' && order.quoteAmount && (
                     <div className="border-t pt-4">
                       <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
@@ -424,7 +431,7 @@ export const CustomerDashboardComponent = () => {
                   )}
 
                   {/* Payment Success */}
-                  {(order.status === 'paid' || order.status === 'in-progress' || order.status === 'completed') && order.quoteAmount && (
+                  {(order.status === 'quote-accepted' || order.status === 'printing' || order.status === 'in-progress' || order.status === 'completed') && order.quoteAmount && (
                     <div className="border-t pt-4">
                       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                         <div className="flex items-center gap-2 mb-2">
@@ -432,6 +439,7 @@ export const CustomerDashboardComponent = () => {
                           <h4 className="font-medium text-green-400">
                             {order.status === 'completed' ? 'Order Completed!' : 
                              order.status === 'in-progress' ? 'Printing in Progress!' : 
+                             order.status === 'printing' ? 'Printing in Progress!' : 
                              'Payment Successful!'}
                           </h4>
                         </div>

@@ -80,9 +80,26 @@ export const orderAPI = {
   // Get orders assigned to provider
   getProviderOrders: () => api.get('/requests/provider-orders'),
   
-  // Accept/reject order (provider action)
-  respondToOrder: (orderId: string, action: 'accept' | 'reject', notes?: string) => 
-    api.put(`/requests/${orderId}/respond`, { action, notes }),
+  // Accept/reject order or submit quote (provider action)
+  respondToOrder: (orderId: string, action: 'accept' | 'reject' | 'quote', data?: {
+    notes?: string;
+    quoteAmount?: string;
+    estimatedDelivery?: string;
+    // Legacy fields for production API compatibility
+    quotedPrice?: number;
+    quotedTimeline?: string;
+  }) => {
+    const payload = { 
+      action,
+      notes: data?.notes,
+      quoteAmount: data?.quoteAmount,
+      estimatedDelivery: data?.estimatedDelivery,
+      quotedPrice: data?.quotedPrice,
+      quotedTimeline: data?.quotedTimeline
+    };
+    console.log('API payload being sent:', payload);
+    return api.put(`/requests/${orderId}/respond`, payload);
+  },
   
   // Update order status
   updateStatus: (orderId: string, status: string, notes?: string) => 

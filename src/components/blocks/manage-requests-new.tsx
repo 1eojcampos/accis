@@ -65,7 +65,7 @@ interface PrintRequest {
   location?: string;
   estimatedCost: number;
   estimatedTimeline: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'in-progress' | 'completed' | 'rejected';
+  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'printing' | 'in-progress' | 'completed' | 'rejected';
   providerId?: string;
   quoteAmount?: number;
   estimatedDeliveryTime?: string;
@@ -218,8 +218,8 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   formatFileSize,
   getStatusColor
 }) => {
-  const canSubmitQuote = order.status === 'accepted';
-  const isPaid = order.status === 'paid';
+  const canSubmitQuote = order.status === 'quote-submitted';
+  const isPaid = order.status === 'quote-accepted';
   const isQuoteSubmitted = order.status === 'quote-submitted';
 
   return (
@@ -242,7 +242,7 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           <div className="flex items-center gap-2">
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Sent' : 
-               order.status === 'paid' ? 'Ready to Print' : 
+               order.status === 'quote-accepted' ? 'Ready to Print' : 
                order.status}
             </Badge>
             {isPaid && (
@@ -430,13 +430,13 @@ export const ManageRequestsComponent = () => {
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [acceptingOrder, setAcceptingOrder] = useState<string | null>(null);
 
-  // Load available requests (pending orders with no provider)
+  // Load available requests (quote-requested orders with no provider)
   useEffect(() => {
     if (!currentUser) return;
 
     const requestsQuery = query(
       collection(db, 'printRequests'),
-      where('status', '==', 'pending'),
+      where('status', '==', 'quote-requested'),
       where('providerId', '==', null),
       orderBy('createdAt', 'desc')
     );
@@ -572,7 +572,7 @@ export const ManageRequestsComponent = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'quote-requested': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       case 'accepted': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'quote-submitted': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -635,9 +635,9 @@ export const ManageRequestsComponent = () => {
     );
   }
 
-  const pendingCount = requests.length;
-  const acceptedCount = myOrders.filter(o => o.status === 'accepted').length;
-  const paidCount = myOrders.filter(o => o.status === 'paid').length;
+  const requestsCount = requests.length;
+  const acceptedCount = myOrders.filter(o => o.status === 'quote-submitted').length;
+  const paidCount = myOrders.filter(o => o.status === 'quote-accepted').length;
   const totalRevenue = myOrders.reduce((sum, order) => sum + (order.quoteAmount || order.estimatedCost || 0), 0);
 
   return (
@@ -670,7 +670,7 @@ export const ManageRequestsComponent = () => {
                 <Clock className="w-5 h-5 text-blue-400" />
                 <span className="text-sm text-muted-foreground">Available Requests</span>
               </div>
-              <p className="text-2xl font-bold text-foreground mt-1">{pendingCount}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{requestsCount}</p>
             </div>
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
@@ -737,7 +737,7 @@ export const ManageRequestsComponent = () => {
         <Tabs defaultValue="available" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="available">
-              Available Requests ({pendingCount})
+              Available Requests ({requestsCount})
             </TabsTrigger>
             <TabsTrigger value="my-orders">
               My Orders ({myOrders.length})
@@ -754,7 +754,7 @@ export const ManageRequestsComponent = () => {
                   <p className="text-muted-foreground">
                     {searchTerm || materialFilter !== 'all' 
                       ? 'No requests match your current filters.' 
-                      : 'There are currently no pending print requests available.'}
+                      : 'There are currently no quote requests available.'}
                   </p>
                 </CardContent>
               </Card>

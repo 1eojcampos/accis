@@ -108,7 +108,11 @@ export default function ProviderOrdersManagement() {
         if (quoteTimelines[orderId]) requestData.quotedTimeline = quoteTimelines[orderId]
       }
       
-      await orderAPI.respondToOrder(orderId, action, responseNotes)
+      await orderAPI.respondToOrder(orderId, action, {
+        notes: responseNotes,
+        quotedPrice: quotePrices[orderId],
+        quotedTimeline: quoteTimelines[orderId]?.toString() || ''
+      })
       
       // Reset form
       setRespondingTo(null)

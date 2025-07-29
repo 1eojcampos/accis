@@ -12,6 +12,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { orderAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,7 +134,7 @@ interface PrintRequest {
   location?: string;
   estimatedCost: number;
   estimatedTimeline: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'printing' | 'completed' | 'rejected';
+  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'printing' | 'completed' | 'rejected';
   providerId?: string;
   quoteAmount?: number;
   estimatedDeliveryTime?: string;
@@ -147,8 +148,8 @@ interface PrintRequest {
 // RequestCard component for available requests
 interface RequestCardProps {
   request: PrintRequest;
-  onAccept: () => void;
-  accepting: boolean;
+  onSubmitQuote: (requestId: string, quoteAmount: string, estimatedDelivery: string, notes: string) => void;
+  submittingQuote: boolean;
   formatPrice: (price: number) => string;
   formatDate: (timestamp: any) => string;
   formatFileSize: (bytes: number) => string;
@@ -157,13 +158,53 @@ interface RequestCardProps {
 
 const RequestCard: React.FC<RequestCardProps> = ({
   request,
-  onAccept,
-  accepting,
+  onSubmitQuote,
+  submittingQuote,
   formatPrice,
   formatDate,
   formatFileSize,
   getStatusColor
 }) => {
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [quoteAmount, setQuoteAmount] = useState('');
+  const [estimatedDelivery, setEstimatedDelivery] = useState('');
+  const [quoteNotes, setQuoteNotes] = useState('');
+
+  const handleSubmitQuote = () => {
+    if (!quoteAmount.trim()) {
+      toast.error('Please enter a quote amount');
+      return;
+    }
+    
+    // Check if request is still available (status is quote-requested and no provider assigned)
+    if (request.status !== 'quote-requested') {
+      toast.error(`This request is no longer available (current status: ${request.status})`);
+      setShowQuoteForm(false);
+      return;
+    }
+    
+    if (request.providerId) {
+      toast.error('This request has already been assigned to another provider');
+      setShowQuoteForm(false);
+      return;
+    }
+    
+    // Debug: Log request status before submitting
+    console.log('Request details before submit:', {
+      id: request.id,
+      status: request.status,
+      providerId: request.providerId,
+      customerId: request.customerId
+    });
+    
+    onSubmitQuote(request.id, quoteAmount, estimatedDelivery, quoteNotes);
+    // Reset form
+    setQuoteAmount('');
+    setEstimatedDelivery('');
+    setQuoteNotes('');
+    setShowQuoteForm(false);
+  };
+
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
@@ -183,14 +224,29 @@ const RequestCard: React.FC<RequestCardProps> = ({
             <Badge className={getStatusColor(request.status)}>
               {request.status}
             </Badge>
-            <Button 
-              onClick={onAccept}
-              disabled={accepting}
-              size="sm"
-            >
-              {accepting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Accept Request
-            </Button>
+            {request.status === 'quote-requested' && !request.providerId ? (
+              !showQuoteForm ? (
+                <Button 
+                  onClick={() => setShowQuoteForm(true)}
+                  size="sm"
+                  variant="default"
+                >
+                  Accept & Quote
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setShowQuoteForm(false)}
+                  size="sm"
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              )
+            ) : (
+              <Badge variant="secondary" className="text-muted-foreground">
+                {request.providerId ? 'Assigned' : 'No longer available'}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -249,6 +305,77 @@ const RequestCard: React.FC<RequestCardProps> = ({
             <span>{request.location}</span>
           </div>
         )}
+
+        {/* Quote Form */}
+        {showQuoteForm && request.status === 'quote-requested' && !request.providerId && (
+          <div className="border-t pt-4 mt-4">
+            <h4 className="font-medium mb-4">Accept Request & Submit Quote</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor={`quote-amount-${request.id}`}>Quote Amount ($)</Label>
+                <Input
+                  id={`quote-amount-${request.id}`}
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={quoteAmount}
+                  onChange={(e) => setQuoteAmount(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor={`delivery-time-${request.id}`}>Estimated Delivery</Label>
+                <Input
+                  id={`delivery-time-${request.id}`}
+                  type="date"
+                  value={estimatedDelivery}
+                  onChange={(e) => setEstimatedDelivery(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor={`quote-notes-${request.id}`}>Additional Notes (Optional)</Label>
+              <Textarea
+                id={`quote-notes-${request.id}`}
+                placeholder="Any additional information for the customer..."
+                value={quoteNotes}
+                onChange={(e) => setQuoteNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <Button 
+              onClick={handleSubmitQuote}
+              disabled={submittingQuote || !quoteAmount}
+              className="mt-4"
+            >
+              {submittingQuote && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Accept & Submit Quote
+            </Button>
+          </div>
+        )}
+
+        {/* Show message if request is no longer available but form was open */}
+        {showQuoteForm && (request.status !== 'quote-requested' || request.providerId) && (
+          <div className="border-t pt-4 mt-4">
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <div className="flex items-center gap-2 text-yellow-400">
+                <AlertCircle className="w-5 h-5" />
+                <span className="font-medium">Request No Longer Available</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                This request has been {request.providerId ? 'assigned to another provider' : `marked as ${request.status}`}.
+              </p>
+              <Button 
+                onClick={() => setShowQuoteForm(false)}
+                variant="outline"
+                size="sm"
+                className="mt-3"
+              >
+                Close Form
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -290,8 +417,8 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   formatFileSize,
   getStatusColor
 }) => {
-  const canSubmitQuote = order.status === 'accepted';
-  const isPaid = order.status === 'paid';
+  const canSubmitQuote = order.status === 'quote-submitted';
+  const isPaid = order.status === 'quote-accepted';
   const isQuoteSubmitted = order.status === 'quote-submitted';
   const isPrinting = order.status === 'printing';
   const isCompleted = order.status === 'completed';
@@ -316,7 +443,7 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           <div className="flex items-center gap-2">
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Sent' : 
-               order.status === 'paid' ? 'Ready to Print' : 
+               order.status === 'quote-accepted' ? 'Ready to Print' : 
                order.status === 'printing' ? 'Printing' :
                order.status === 'completed' ? 'Completed' :
                order.status}
@@ -620,13 +747,13 @@ export const ManageRequestsComponent = () => {
     }
   };
 
-  // Load available requests (pending orders with no provider)
+  // Load available requests (quote-requested orders with no provider)
   useEffect(() => {
     if (!currentUser) return;
 
     const requestsQuery = query(
       collection(db, 'printRequests'),
-      where('status', '==', 'pending'),
+      where('status', '==', 'quote-requested'),
       where('providerId', '==', null),
       orderBy('createdAt', 'desc')
     );
@@ -639,7 +766,12 @@ export const ManageRequestsComponent = () => {
           ...doc.data()
         })) as PrintRequest[];
         
-        setRequests(requestsData);
+        // Filter out requests created by the current user (they can't respond to their own requests)
+        const availableRequests = requestsData.filter(request => 
+          request.customerId !== currentUser.uid
+        );
+        
+        setRequests(availableRequests);
         setLoading(false);
         setError(null);
       },
@@ -682,24 +814,55 @@ export const ManageRequestsComponent = () => {
     return () => unsubscribe();
   }, [currentUser]);
 
-  // Accept a print request
-  const handleAcceptRequest = async (requestId: string) => {
+  // Submit quote for available request (replaces accept functionality)
+  const handleSubmitQuoteForRequest = async (requestId: string, quoteAmount: string, estimatedDelivery: string, notes: string) => {
     if (!currentUser) return;
     
     setAcceptingOrder(requestId);
     try {
-      const requestDoc = doc(db, 'printRequests', requestId);
-      await updateDoc(requestDoc, {
-        status: 'accepted',
-        providerId: currentUser.uid,
-        acceptedAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+      // Check if user is trying to respond to their own request
+      const targetRequest = requests.find(r => r.id === requestId);
+      if (targetRequest?.customerId === currentUser.uid) {
+        toast.error('You cannot submit a quote for your own request');
+        setAcceptingOrder(null);
+        return;
+      }
+      
+      // Debug: Log what we're sending
+      console.log('Sending quote payload:', {
+        action: 'accept',
+        notes,
+        quotedPrice: parseFloat(quoteAmount),
+        quotedTimeline: estimatedDelivery
+      });
+      console.log('Current user ID:', currentUser?.uid);
+      console.log('Request customer ID:', requests.find(r => r.id === requestId)?.customerId);
+      
+      // Use the legacy API format - accept with quoted price and timeline
+      await orderAPI.respondToOrder(requestId, 'accept', {
+        notes,
+        quotedPrice: parseFloat(quoteAmount),
+        quotedTimeline: estimatedDelivery
       });
       
-      toast.success('Request accepted successfully!');
-    } catch (error) {
-      console.error('Error accepting request:', error);
-      toast.error('Failed to accept request');
+      console.log('Quote submission successful! Payload sent:', {
+        action: 'accept',
+        notes,
+        quotedPrice: parseFloat(quoteAmount),
+        quotedTimeline: estimatedDelivery
+      });
+      
+      toast.success('Request accepted and quote submitted successfully!');
+    } catch (error: any) {
+      console.error('Error submitting quote:', error);
+      console.error('Error response:', error.response?.data);
+      
+      let errorMessage = 'Failed to submit quote';
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setAcceptingOrder(null);
     }
@@ -879,7 +1042,7 @@ export const ManageRequestsComponent = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'quote-requested': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
       case 'accepted': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'quote-submitted': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
@@ -1037,9 +1200,9 @@ export const ManageRequestsComponent = () => {
     );
   }
 
-  const pendingCount = requests.length;
-  const acceptedCount = myOrders.filter(o => o.status === 'accepted').length;
-  const paidCount = myOrders.filter(o => o.status === 'paid').length;
+  const requestsCount = requests.length;
+  const acceptedCount = myOrders.filter(o => o.status === 'quote-submitted').length;
+  const paidCount = myOrders.filter(o => o.status === 'quote-accepted').length;
   const totalRevenue = myOrders.reduce((sum, order) => sum + (order.quoteAmount || order.estimatedCost || 0), 0);
 
   return (
@@ -1072,7 +1235,7 @@ export const ManageRequestsComponent = () => {
                 <Clock className="w-5 h-5 text-blue-400" />
                 <span className="text-sm text-muted-foreground">Available Requests</span>
               </div>
-              <p className="text-2xl font-bold text-foreground mt-1">{pendingCount}</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{requestsCount}</p>
             </div>
             <div className="bg-background rounded-lg p-4 border">
               <div className="flex items-center gap-2">
@@ -1139,7 +1302,7 @@ export const ManageRequestsComponent = () => {
         <Tabs defaultValue="available" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="available">
-              Available Requests ({pendingCount})
+              Available Requests ({requestsCount})
             </TabsTrigger>
             <TabsTrigger value="my-orders">
               My Orders ({myOrders.length})
@@ -1156,7 +1319,7 @@ export const ManageRequestsComponent = () => {
                   <p className="text-muted-foreground">
                     {searchTerm || materialFilter !== 'all' 
                       ? 'No requests match your current filters.' 
-                      : 'There are currently no pending print requests available.'}
+                      : 'There are currently no quote requests available.'}
                   </p>
                 </CardContent>
               </Card>
@@ -1166,8 +1329,8 @@ export const ManageRequestsComponent = () => {
                   <RequestCard 
                     key={request.id}
                     request={request}
-                    onAccept={() => handleAcceptRequest(request.id)}
-                    accepting={acceptingOrder === request.id}
+                    onSubmitQuote={handleSubmitQuoteForRequest}
+                    submittingQuote={acceptingOrder === request.id}
                     formatPrice={formatPrice}
                     formatDate={formatDate}
                     formatFileSize={formatFileSize}

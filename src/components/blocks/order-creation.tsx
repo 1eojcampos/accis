@@ -207,9 +207,9 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
         },
         
         // Status tracking with history
-        status: 'pending',
+        status: 'quote-requested',
         statusHistory: [{
-          status: 'pending',
+          status: 'quote-requested',
           timestamp: new Date().toISOString(),
           updatedBy: user?.uid || 'anonymous',
           notes: 'Order submitted by customer'

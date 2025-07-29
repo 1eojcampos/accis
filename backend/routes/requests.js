@@ -59,7 +59,7 @@ router.get('/available', authenticateToken, async (req, res) => {
   try {
     const { location } = req.query;
     let query = db.collection('printRequests')
-      .where('status', '==', 'pending')
+      .where('status', '==', 'quote-requested')
       .limit(50); // Limit to 50 recent orders
     
     const snapshot = await query.get();
@@ -153,7 +153,7 @@ router.post('/', authenticateToken, async (req, res) => {
       location: location || '',
       estimatedCost: estimatedCost || 0,
       estimatedTimeline: estimatedTimeline || 0,
-      status: 'pending',
+      status: 'quote-requested',
       createdAt: new Date(),
       updatedAt: new Date(),
       providerId: null,
@@ -170,14 +170,20 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Provider accepts or rejects an order
+// Provider submits a quote for an order
 router.put('/:id/respond', authenticateToken, async (req, res) => {
   try {
     const requestId = req.params.id;
-    const { action, notes, quotedPrice, quotedTimeline } = req.body;
+    const { action, quoteAmount, estimatedDelivery, notes } = req.body;
     
-    if (!['accept', 'reject'].includes(action)) {
-      return res.status(400).json({ error: 'Action must be either "accept" or "reject"' });
+    // Debug: Log the received data
+    console.log('Received payload:', req.body);
+    console.log('Extracted fields:', { action, quoteAmount, estimatedDelivery, notes });
+    
+    // Support both legacy "accept/reject" and new "quote" action
+    if (!['accept', 'reject', 'quote'].includes(action)) {
+      console.log('Invalid action received:', action);
+      return res.status(400).json({ error: 'Action must be either "accept", "reject", or "quote"' });
     }
 
     // Get the request first to check if it's still available
@@ -187,28 +193,175 @@ router.put('/:id/respond', authenticateToken, async (req, res) => {
     }
 
     const requestData = requestDoc.data();
-    if (requestData.status !== 'pending') {
+    console.log('Request data found:', {
+      id: requestId,
+      status: requestData.status,
+      customerId: requestData.customerId,
+      hasProviderId: !!requestData.providerId
+    });
+    
+    if (requestData.status !== 'quote-requested') {
+      console.log('Request not available - current status:', requestData.status);
       return res.status(400).json({ error: 'This request is no longer available' });
     }
 
     // Don't allow customer to respond to their own request
     if (requestData.customerId === req.user.uid) {
+      console.log('User trying to respond to own request:', {
+        requestCustomerId: requestData.customerId,
+        currentUserId: req.user.uid
+      });
       return res.status(400).json({ error: 'Cannot respond to your own request' });
     }
 
-    const updates = {
-      status: action === 'accept' ? 'accepted' : 'rejected',
+    console.log('User validation passed:', {
+      requestCustomerId: requestData.customerId,
+      currentUserId: req.user.uid,
+      action: action
+    });
+
+    let updates = {
       providerId: req.user.uid,
       providerNotes: notes || null,
       updatedAt: new Date()
     };
 
-    if (action === 'accept') {
-      if (quotedPrice) updates.actualCost = quotedPrice;
-      if (quotedTimeline) updates.actualTimeline = quotedTimeline;
+    if (action === 'quote') {
+      // New quote submission workflow
+      if (!quoteAmount) {
+        console.log('Quote amount missing:', quoteAmount);
+        return res.status(400).json({ error: 'Quote amount is required' });
+      }
+
+      // Validate quote amount is a valid number
+      const amount = parseFloat(quoteAmount);
+      if (isNaN(amount) || amount <= 0) {
+        console.log('Invalid quote amount:', quoteAmount, 'parsed as:', amount);
+        return res.status(400).json({ error: 'Quote amount must be a valid positive number' });
+      }
+
+      // Enhanced quote structure
+      const quoteData = {
+        amount: parseFloat(quoteAmount),
+        deliveryTime: estimatedDelivery || '3-5 business days',
+        notes: notes || '',
+        submittedAt: new Date().toISOString(),
+        providerId: req.user.uid,
+        providerName: req.user.displayName || 'Provider',
+        breakdown: [
+          { item: 'Material and printing', cost: parseFloat(quoteAmount) * 0.8 },
+          { item: 'Labor and setup', cost: parseFloat(quoteAmount) * 0.2 }
+        ],
+        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+      };
+
+      // Status history entry
+      const statusEntry = {
+        status: 'quote-submitted',
+        timestamp: new Date().toISOString(),
+        updatedBy: req.user.uid,
+        actor: req.user.uid,
+        notes: `Quote submitted: $${parseFloat(quoteAmount)}`
+      };
+
+      updates = {
+        ...updates,
+        status: 'quote-submitted',
+        quote: quoteData,
+        quoteAmount: parseFloat(quoteAmount),
+        estimatedDeliveryTime: estimatedDelivery,
+        quotedAt: new Date(),
+        statusHistory: [...(requestData.statusHistory || []), statusEntry]
+      };
+
+      // Update budget in enhanced schema if it exists
+      if (requestData.budget) {
+        updates['budget.quoted'] = parseFloat(quoteAmount);
+      }
+
+      // Update timeline in enhanced schema if it exists  
+      if (requestData.timeline && estimatedDelivery) {
+        const daysDiff = Math.ceil((new Date(estimatedDelivery).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        updates['timeline.estimated'] = Math.max(1, daysDiff);
+      }
+
+    } else {
+      // Legacy accept/reject workflow
+      if (action === 'accept') {
+        const { quotedPrice, quotedTimeline } = req.body;
+        
+        // If quotedPrice is provided, treat this as a quote submission (accept with quote)
+        if (quotedPrice) {
+          // Validate quote amount is a valid number
+          const amount = parseFloat(quotedPrice);
+          if (isNaN(amount) || amount <= 0) {
+            console.log('Invalid quoted price:', quotedPrice, 'parsed as:', amount);
+            return res.status(400).json({ error: 'Quoted price must be a valid positive number' });
+          }
+
+          // Enhanced quote structure for legacy accept-with-quote
+          const quoteData = {
+            amount: amount,
+            deliveryTime: quotedTimeline || '3-5 business days',
+            notes: notes || '',
+            submittedAt: new Date().toISOString(),
+            providerId: req.user.uid,
+            providerName: req.user.displayName || 'Provider',
+            breakdown: [
+              { item: 'Material and printing', cost: amount * 0.8 },
+              { item: 'Labor and setup', cost: amount * 0.2 }
+            ],
+            validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+          };
+
+          // Status history entry
+          const statusEntry = {
+            status: 'quote-submitted',
+            timestamp: new Date().toISOString(),
+            updatedBy: req.user.uid,
+            actor: req.user.uid,
+            notes: `Quote submitted via accept: $${amount}`
+          };
+
+          updates = {
+            ...updates,
+            status: 'quote-submitted', // Use quote-submitted status for customer dashboard compatibility
+            quote: quoteData,
+            quoteAmount: amount,        // Customer dashboard expects quoteAmount
+            estimatedDeliveryTime: quotedTimeline, // Customer dashboard expects estimatedDeliveryTime
+            quotedAt: new Date(),
+            statusHistory: [...(requestData.statusHistory || []), statusEntry],
+            // Keep legacy fields for backward compatibility
+            actualCost: amount,
+            actualTimeline: quotedTimeline
+          };
+
+          // Update budget in enhanced schema if it exists
+          if (requestData.budget) {
+            updates['budget.quoted'] = amount;
+          }
+
+          // Update timeline in enhanced schema if it exists  
+          if (requestData.timeline && quotedTimeline) {
+            const daysDiff = Math.ceil((new Date(quotedTimeline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+            updates['timeline.estimated'] = Math.max(1, daysDiff);
+          }
+        } else {
+          // Standard accept without quote (legacy behavior)
+          updates.status = 'accepted';
+        }
+      } else {
+        // Reject workflow
+        updates.status = 'rejected';
+      }
     }
     
+    console.log('Final updates object for request', requestId, ':', JSON.stringify(updates, null, 2));
+    
     await db.collection('printRequests').doc(requestId).update(updates);
+    
+    console.log('Successfully updated request:', requestId, 'with status:', updates.status);
+    
     res.json({ id: requestId, ...updates });
   } catch (error) {
     console.error('Error responding to request:', error);
