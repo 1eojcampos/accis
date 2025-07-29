@@ -33,7 +33,7 @@ interface Order {
   location: string
   estimatedCost: number
   estimatedTimeline: number
-  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed'
+  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'paid' | 'printing'
   createdAt: any
   updatedAt: any
   providerId?: string
@@ -94,6 +94,16 @@ export default function ProviderOrdersManagement() {
     fetchOrders()
   }, [])
 
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    try {
+      setError(null)
+      await orderAPI.updateStatus(orderId, newStatus)
+      fetchOrders()
+    } catch (err: any) {
+      setError(err.response?.data?.error || `Failed to update order status to ${newStatus}`)
+    }
+  }
+
   const handleRespond = async (orderId: string, action: 'accept' | 'reject') => {
     try {
       setError(null)
@@ -141,6 +151,11 @@ export default function ProviderOrdersManagement() {
       case 'rejected': return 'bg-red-100 text-red-800'
       case 'in_progress': return 'bg-blue-100 text-blue-800'
       case 'completed': return 'bg-gray-100 text-gray-800'
+      case 'quote-requested': return 'bg-purple-100 text-purple-800'
+      case 'quote-submitted': return 'bg-indigo-100 text-indigo-800'
+      case 'quote-accepted': return 'bg-teal-100 text-teal-800'
+      case 'paid': return 'bg-emerald-100 text-emerald-800'
+      case 'printing': return 'bg-cyan-100 text-cyan-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -224,6 +239,19 @@ export default function ProviderOrdersManagement() {
           <div className="mb-4">
             <p className="text-sm font-medium mb-1">Provider Notes:</p>
             <p className="text-sm text-muted-foreground">{order.providerNotes}</p>
+          </div>
+        )}
+
+        {/* Show 'Start Printing' button for paid orders */}
+        {!isAvailable && order.status === 'paid' && (
+          <div className="mt-4">
+            <Button
+              onClick={() => handleStatusUpdate(order.id, 'printing')}
+              className="w-full bg-cyan-600 hover:bg-cyan-700"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Start Printing
+            </Button>
           </div>
         )}
         

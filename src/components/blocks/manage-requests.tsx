@@ -134,7 +134,7 @@ interface PrintRequest {
   location?: string;
   estimatedCost: number;
   estimatedTimeline: number;
-  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'printing' | 'completed' | 'rejected';
+  status: 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'paid' | 'printing' | 'completed' | 'rejected';
   providerId?: string;
   quoteAmount?: number;
   estimatedDeliveryTime?: string;
@@ -418,7 +418,7 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   getStatusColor
 }) => {
   const canSubmitQuote = order.status === 'quote-submitted';
-  const isPaid = order.status === 'quote-accepted';
+  const isPaid = order.status === 'paid';  // Fixed: Changed from quote-accepted to paid
   const isQuoteSubmitted = order.status === 'quote-submitted';
   const isPrinting = order.status === 'printing';
   const isCompleted = order.status === 'completed';
@@ -443,7 +443,8 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           <div className="flex items-center gap-2">
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Sent' : 
-               order.status === 'quote-accepted' ? 'Ready to Print' : 
+               order.status === 'quote-accepted' ? 'Quote Accepted' : 
+               order.status === 'paid' ? 'Ready to Print' :
                order.status === 'printing' ? 'Printing' :
                order.status === 'completed' ? 'Completed' :
                order.status}
@@ -467,6 +468,26 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Mark as Complete button */}
+        {isPrinting && !isCompleted && (
+          <Button
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={() => onCompletePrint(order.id)}
+            disabled={submittingQuote}
+          >
+            {submittingQuote ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Completing Print Job...
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Mark as Complete
+              </>
+            )}
+          </Button>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 className="font-medium mb-2">Print Specifications</h4>
