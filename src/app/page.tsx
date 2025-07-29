@@ -282,9 +282,11 @@ export default function HomePage() {
             className="flex items-center space-x-2 cursor-pointer"
             onClick={() => handleSectionChange('home')}
           >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">A</span>
-            </div>
+            <img 
+              src="/accis-logo.svg" 
+              alt="Accis Logo" 
+              className="w-12 h-12 object-contain"
+            />
             <span className="font-semibold text-foreground text-xl">Accis</span>
           </div>
 

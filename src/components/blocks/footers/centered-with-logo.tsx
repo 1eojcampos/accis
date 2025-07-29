@@ -236,10 +236,12 @@ const Logo = () => {
       href="/"
       className="font-normal flex space-x-2 items-center text-sm mr-4 text-white px-2 py-1 relative z-20"
     >
-      <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-        <span className="text-white font-bold text-lg font-[var(--font-display)]">P</span>
-      </div>
-      <span className="font-semibold text-white text-xl font-[var(--font-display)]">Accis</span>
+      <img 
+        src="/accis-logo.svg" 
+        alt="Accis Logo" 
+        className="w-10 h-10 object-contain filter invert"
+      />
+      <span className="font-semibold text-white text-xl">Accis</span>
     </Link>
   );
 };
