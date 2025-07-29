@@ -49,19 +49,84 @@ interface PrintRequest {
   customerId: string;
   customerEmail?: string;
   customerName?: string;
-  files: Array<{
+  
+  // Enhanced nested schema structure
+  enhancedFiles?: {
+    uploaded: Array<{
+      name: string;
+      size: number;
+      type: string;
+      uploadedAt?: string;
+      status?: string;
+    }>;
+    totalCount: number;
+    totalSize: number;
+  };
+  
+  enhancedRequirements?: {
+    material: string;
+    quality: string;
+    quantity: number;
+    specifications?: string;
+    location?: string;
+  };
+  
+  timeline?: {
+    requested?: string | null;
+    estimated: number;
+    actual?: string | null;
+    completion?: {
+      estimatedDate?: string;
+      actualDate?: string;
+    };
+  };
+  
+  budget?: {
+    customerMax?: number | null;
+    estimated: number;
+    quoted?: number | null;
+    final?: number | null;
+  };
+  
+  statusHistory?: Array<{
+    status: string;
+    timestamp: string;
+    updatedBy: string;
+    actor?: string;
+    notes?: string;
+  }>;
+  
+  quote?: {
+    amount: number;
+    deliveryTime: string;
+    notes?: string;
+    submittedAt: string;
+    acceptedAt?: string;
+    providerId: string;
+    providerName: string;
+  } | null;
+  
+  payment?: {
+    status: 'pending' | 'paid' | 'failed';
+    method?: string;
+    paidAt?: string;
+    amount?: number;
+  };
+  
+  // Legacy fields for backward compatibility (will be used if new schema is not available)
+  legacyFiles?: Array<{
     name: string;
     size: number;
     type: string;
   }>;
-  material: string;
-  quality: string;
-  quantity: number;
-  requirements?: string;
+  material?: string;
+  quality?: string;
+  quantity?: number;
+  legacyRequirements?: string;
   location?: string;
-  estimatedCost: number;
-  estimatedTimeline: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'in-progress' | 'completed' | 'rejected';
+  estimatedCost?: number;
+  estimatedTimeline?: number;
+  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'printing' | 'in-progress' | 'completed' | 'rejected';
   providerId?: string;
   providerName?: string;
   providerEmail?: string;
@@ -95,9 +160,55 @@ const OrderCard: React.FC<OrderCardProps> = ({
   formatFileSize,
   getStatusColor
 }) => {
-  const canPay = order.status === 'quote-submitted' && order.quoteAmount;
-  const isPaid = order.status === 'paid';
+  // Helper functions to access data from both new and legacy schema
+  const getFiles = () => {
+    if (order.enhancedFiles?.uploaded) {
+      return order.enhancedFiles.uploaded;
+    }
+    return order.legacyFiles || [];
+  };
+
+  const getMaterial = () => {
+    return order.enhancedRequirements?.material || order.material || 'Unknown';
+  };
+
+  const getQuality = () => {
+    return order.enhancedRequirements?.quality || order.quality || 'Unknown';
+  };
+
+  const getQuantity = () => {
+    return order.enhancedRequirements?.quantity || order.quantity || 1;
+  };
+
+  const getRequirements = () => {
+    return order.enhancedRequirements?.specifications || order.legacyRequirements || '';
+  };
+
+  const getEstimatedCost = () => {
+    return order.budget?.estimated || order.estimatedCost || 0;
+  };
+
+  const getQuoteAmount = () => {
+    return order.quote?.amount || order.quoteAmount || null;
+  };
+
+  const getQuoteNotes = () => {
+    return order.quote?.notes || order.providerNotes || '';
+  };
+
+  const getQuotedAt = () => {
+    return order.quote?.submittedAt || order.quotedAt;
+  };
+
+  const getEstimatedDelivery = () => {
+    return order.quote?.deliveryTime || order.estimatedDeliveryTime || '';
+  };
+
+  const files = getFiles();
+  const canPay = order.status === 'quote-submitted' && getQuoteAmount();
+  const isPaid = order.status === 'paid' || order.status === 'printing' || order.status === 'completed';
   const isCompleted = order.status === 'completed';
+  const isPrinting = order.status === 'printing';
   const isInProgress = order.status === 'in-progress';
 
   return (
@@ -119,13 +230,18 @@ const OrderCard: React.FC<OrderCardProps> = ({
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Received' : 
                order.status === 'paid' ? 'Payment Confirmed' : 
-               order.status === 'in-progress' ? 'Being Printed' :
+               order.status === 'printing' ? 'Being Printed' :
                order.status === 'completed' ? 'Ready for Pickup' :
                order.status}
             </Badge>
             {isPaid && (
               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                 💳 Paid
+              </Badge>
+            )}
+            {order.status === 'printing' && order.timeline?.completion?.estimatedDate && (
+              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                🖨️ Est: {new Date(order.timeline.completion.estimatedDate).toLocaleDateString()}
               </Badge>
             )}
           </div>
@@ -138,49 +254,49 @@ const OrderCard: React.FC<OrderCardProps> = ({
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Material:</span>
-                <span>{order.material}</span>
+                <span>{getMaterial()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Quality:</span>
-                <span>{order.quality}</span>
+                <span>{getQuality()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Quantity:</span>
-                <span>{order.quantity}</span>
+                <span>{getQuantity()}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">
-                  {order.quoteAmount ? 'Quote Amount:' : 'Estimated Cost:'}
+                  {getQuoteAmount() ? 'Quote Amount:' : 'Estimated Cost:'}
                 </span>
                 <span className="font-medium">
-                  {formatPrice(order.quoteAmount || order.estimatedCost)}
+                  {formatPrice(getQuoteAmount() || getEstimatedCost())}
                 </span>
               </div>
             </div>
           </div>
           <div>
-            <h4 className="font-medium mb-2">Files ({order.files.length})</h4>
+            <h4 className="font-medium mb-2">Files ({files.length})</h4>
             <div className="space-y-1">
-              {order.files.slice(0, 3).map((file, index) => (
+              {files.slice(0, 3).map((file, index) => (
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <FileText className="w-4 h-4 text-muted-foreground" />
                   <span className="truncate">{file.name}</span>
                   <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
                 </div>
               ))}
-              {order.files.length > 3 && (
+              {files.length > 3 && (
                 <p className="text-sm text-muted-foreground">
-                  +{order.files.length - 3} more files
+                  +{files.length - 3} more files
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {order.requirements && (
+        {getRequirements() && (
           <div>
             <h4 className="font-medium mb-2">Requirements</h4>
-            <p className="text-sm text-muted-foreground">{order.requirements}</p>
+            <p className="text-sm text-muted-foreground">{getRequirements()}</p>
           </div>
         )}
 
@@ -212,22 +328,22 @@ const OrderCard: React.FC<OrderCardProps> = ({
               <div className="space-y-2 text-sm mb-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Quote Amount:</span>
-                  <span className="font-medium text-lg">{formatPrice(order.quoteAmount!)}</span>
+                  <span className="font-medium text-lg">{formatPrice(getQuoteAmount()!)}</span>
                 </div>
-                {order.estimatedDeliveryTime && (
+                {getEstimatedDelivery() && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Estimated Delivery:</span>
-                    <span>{order.estimatedDeliveryTime}</span>
+                    <span>{getEstimatedDelivery()}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Quote Sent:</span>
-                  <span>{formatDate(order.quotedAt)}</span>
+                  <span>{formatDate(getQuotedAt())}</span>
                 </div>
-                {order.providerNotes && (
+                {getQuoteNotes() && (
                   <div className="mt-2">
                     <span className="text-muted-foreground block">Provider Notes:</span>
-                    <span className="text-sm">{order.providerNotes}</span>
+                    <span className="text-sm">{getQuoteNotes()}</span>
                   </div>
                 )}
               </div>
@@ -245,7 +361,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Test Pay {formatPrice(order.quoteAmount!)}
+                    Test Pay {formatPrice(getQuoteAmount()!)}
                   </>
                 )}
               </Button>
@@ -253,8 +369,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         )}
 
-        {/* Payment confirmed */}
-        {isPaid && (
+        {/* Payment confirmed status - only show when paid but not printing/completed */}
+        {isPaid && !isPrinting && !isCompleted && (
           <div className="border-t pt-4">
             <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
@@ -264,16 +380,63 @@ const OrderCard: React.FC<OrderCardProps> = ({
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Final Amount:</span>
-                  <span className="font-medium">{formatPrice(order.quoteAmount || order.estimatedCost)}</span>
+                  <span className="font-medium">{formatPrice(order.payment?.amount || getQuoteAmount() || getEstimatedCost())}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Paid At:</span>
-                  <span>{formatDate(order.paidAt)}</span>
+                  <span>{formatDate(order.payment?.paidAt || order.paidAt)}</span>
                 </div>
               </div>
               <p className="text-sm text-green-400 mt-2">
-                🎉 Your order is now being processed by the provider!
+                🎉 Your order is queued for printing!
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* Printing Status */}
+        {isPrinting && (
+          <div className="border-t pt-4">
+            <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Printer className="w-5 h-5 text-purple-400" />
+                <h4 className="font-medium text-purple-400">Currently Printing</h4>
+              </div>
+              <div className="space-y-2 text-sm">
+                {order.timeline?.completion?.estimatedDate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Estimated Completion:</span>
+                    <span>{new Date(order.timeline.completion.estimatedDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-purple-400">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Your order is being printed...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Completion Status */}
+        {isCompleted && (
+          <div className="border-t pt-4">
+            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <h4 className="font-medium text-green-400">Order Completed</h4>
+              </div>
+              <div className="space-y-2 text-sm">
+                {order.timeline?.completion?.actualDate && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Completed On:</span>
+                    <span>{new Date(order.timeline.completion.actualDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+                <div className="text-green-400">
+                  ✓ Ready for pickup or delivery
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -370,7 +533,39 @@ export default function OrderTracking() {
     setPayingOrder(orderId);
     try {
       const orderDoc = doc(db, 'printRequests', orderId);
+      const currentOrder = orders.find(o => o.id === orderId);
+      
+      // Enhanced payment structure
+      const paymentData = {
+        status: 'paid' as const,
+        method: 'test-simulated',
+        paidAt: new Date().toISOString(),
+        amount: currentOrder?.quote?.amount || currentOrder?.quoteAmount || currentOrder?.estimatedCost || 0
+      };
+
+      // Status history entry
+      const statusEntry = {
+        status: 'paid',
+        timestamp: new Date().toISOString(),
+        updatedBy: currentUser.uid,
+        actor: currentUser.uid,
+        notes: `Payment accepted: ${formatPrice(paymentData.amount)}`
+      };
+
+      // Update quote with acceptance timestamp
+      const updatedQuote = currentOrder?.quote ? {
+        ...currentOrder.quote,
+        acceptedAt: new Date().toISOString()
+      } : null;
+
       await updateDoc(orderDoc, {
+        // Enhanced schema fields
+        payment: paymentData,
+        quote: updatedQuote,
+        'budget.final': paymentData.amount,
+        statusHistory: [...(currentOrder?.statusHistory || []), statusEntry],
+        
+        // Legacy compatibility fields
         status: 'paid',
         paidAt: serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -387,9 +582,14 @@ export default function OrderTracking() {
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
-      const matchesSearch = order.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.requirements?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          order.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      // Helper functions for this order
+      const getMaterial = () => order.enhancedRequirements?.material || order.material || '';
+      const getRequirements = () => order.enhancedRequirements?.specifications || order.legacyRequirements || '';
+      const getLocation = () => order.enhancedRequirements?.location || order.location || '';
+      
+      const matchesSearch = getMaterial().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          getRequirements().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          getLocation().toLowerCase().includes(searchTerm.toLowerCase()) ||
                           order.id.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -404,6 +604,7 @@ export default function OrderTracking() {
       case 'accepted': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'quote-submitted': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'printing': return 'bg-purple-600/20 text-purple-300 border-purple-600/30';
       case 'in-progress': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
       case 'completed': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';

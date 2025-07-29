@@ -53,6 +53,74 @@ interface PrintRequest {
   customerId: string;
   customerEmail?: string;
   customerName?: string;
+  
+  // Enhanced nested schema structure
+  enhancedFiles?: {
+    uploaded: Array<{
+      name: string;
+      size: number;
+      type: string;
+      uploadedAt?: string;
+      status?: string;
+    }>;
+    totalCount: number;
+    totalSize: number;
+  };
+  
+  enhancedRequirements?: {
+    material: string;
+    quality: string;
+    quantity: number;
+    specifications?: string;
+    location?: string;
+  };
+  
+  timeline?: {
+    requested?: string | null;
+    estimated: number;
+    actual?: string | null;
+    estimatedCompletion?: string;
+    actualCompletion?: string;
+  };
+  
+  budget?: {
+    customerMax?: number | null;
+    estimated: number;
+    quoted?: number | null;
+    final?: number | null;
+  };
+  
+  statusHistory?: Array<{
+    status: string;
+    timestamp: string;
+    updatedBy: string;
+    notes?: string;
+    actor?: string;
+  }>;
+  
+  quote?: {
+    amount: number;
+    deliveryTime: string;
+    notes?: string;
+    submittedAt: string;
+    providerId: string;
+    providerName: string;
+    breakdown?: Array<{
+      item: string;
+      cost: number;
+    }>;
+    validUntil?: string;
+    acceptedAt?: string;
+  } | null;
+  
+  payment?: {
+    status: 'pending' | 'paid' | 'failed';
+    method?: string;
+    paidAt?: string;
+    amount?: number;
+  } | null;
+  
+  // Legacy fields for backward compatibility
   files: Array<{
     name: string;
     size: number;
@@ -65,7 +133,7 @@ interface PrintRequest {
   location?: string;
   estimatedCost: number;
   estimatedTimeline: number;
-  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'in-progress' | 'completed' | 'rejected';
+  status: 'pending' | 'accepted' | 'quote-submitted' | 'paid' | 'printing' | 'completed' | 'rejected';
   providerId?: string;
   quoteAmount?: number;
   estimatedDeliveryTime?: string;
@@ -190,6 +258,8 @@ const RequestCard: React.FC<RequestCardProps> = ({
 interface MyOrderCardProps {
   order: PrintRequest;
   onSubmitQuote: (orderId: string) => void;
+  onStartPrint: (orderId: string) => void;
+  onCompletePrint: (orderId: string) => void;
   quoteAmount: string;
   setQuoteAmount: (amount: string) => void;
   estimatedDelivery: string;
@@ -206,6 +276,8 @@ interface MyOrderCardProps {
 const MyOrderCard: React.FC<MyOrderCardProps> = ({
   order,
   onSubmitQuote,
+  onStartPrint,
+  onCompletePrint,
   quoteAmount,
   setQuoteAmount,
   estimatedDelivery,
@@ -221,6 +293,8 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   const canSubmitQuote = order.status === 'accepted';
   const isPaid = order.status === 'paid';
   const isQuoteSubmitted = order.status === 'quote-submitted';
+  const isPrinting = order.status === 'printing';
+  const isCompleted = order.status === 'completed';
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -243,11 +317,23 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
             <Badge className={getStatusColor(order.status)}>
               {order.status === 'quote-submitted' ? 'Quote Sent' : 
                order.status === 'paid' ? 'Ready to Print' : 
+               order.status === 'printing' ? 'Printing' :
+               order.status === 'completed' ? 'Completed' :
                order.status}
             </Badge>
-            {isPaid && (
+            {isPaid && !isPrinting && !isCompleted && (
               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                 💰 Paid
+              </Badge>
+            )}
+            {isPrinting && (
+              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
+                🖨️ Printing
+              </Badge>
+            )}
+            {isCompleted && (
+              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                ✅ Done
               </Badge>
             )}
           </div>
@@ -381,15 +467,15 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           </div>
         )}
 
-        {/* Paid order info */}
-        {isPaid && (
+        {/* Paid order info - Ready to print */}
+        {isPaid && !isPrinting && !isCompleted && (
           <div className="border-t pt-4">
             <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Check className="w-5 h-5 text-green-400" />
                 <h4 className="font-medium text-green-400">Order Paid - Ready to Print!</h4>
               </div>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-sm mb-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Final Amount:</span>
                   <span className="font-medium">{formatPrice(order.quoteAmount || order.estimatedCost)}</span>
@@ -399,6 +485,91 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
                   <span>{formatDate(order.paidAt)}</span>
                 </div>
               </div>
+              <Button 
+                onClick={() => onStartPrint(order.id)}
+                disabled={submittingQuote}
+                className="w-full"
+                size="lg"
+              >
+                {submittingQuote ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Starting Print...
+                  </>
+                ) : (
+                  <>
+                    <Layers className="w-4 h-4 mr-2" />
+                    Start Print Job
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Printing status */}
+        {isPrinting && (
+          <div className="border-t pt-4">
+            <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Layers className="w-5 h-5 text-orange-400" />
+                <h4 className="font-medium text-orange-400">Print Job In Progress</h4>
+              </div>
+              <div className="space-y-1 text-sm mb-4">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Started:</span>
+                  <span>{formatDate(order.updatedAt)}</span>
+                </div>
+                {order.timeline?.estimatedCompletion && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Est. Completion:</span>
+                    <span>{formatDate(order.timeline.estimatedCompletion)}</span>
+                  </div>
+                )}
+              </div>
+              <Button 
+                onClick={() => onCompletePrint(order.id)}
+                disabled={submittingQuote}
+                className="w-full"
+                size="lg"
+              >
+                {submittingQuote ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    Mark as Completed
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Completed status */}
+        {isCompleted && (
+          <div className="border-t pt-4">
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Check className="w-5 h-5 text-emerald-400" />
+                <h4 className="font-medium text-emerald-400">Print Job Completed!</h4>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Completed:</span>
+                  <span>{formatDate(order.timeline?.actualCompletion || order.updatedAt)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Final Amount:</span>
+                  <span className="font-medium">{formatPrice(order.budget?.final || order.quoteAmount || order.estimatedCost)}</span>
+                </div>
+              </div>
+              <p className="text-sm text-emerald-400 mt-2">
+                🎉 Job completed successfully! Customer has been notified.
+              </p>
             </div>
           </div>
         )}
@@ -544,7 +715,39 @@ export const ManageRequestsComponent = () => {
     setSubmittingQuote(true);
     try {
       const orderDoc = doc(db, 'printRequests', orderId);
+      
+      // Enhanced quote structure
+      const quoteData = {
+        amount: parseFloat(quoteAmount),
+        deliveryTime: estimatedDelivery || '3-5 business days',
+        notes: quoteNotes || '',
+        submittedAt: new Date().toISOString(),
+        providerId: currentUser.uid,
+        providerName: currentUser.displayName || 'Provider',
+        breakdown: [
+          { item: 'Material and printing', cost: parseFloat(quoteAmount) * 0.8 },
+          { item: 'Labor and setup', cost: parseFloat(quoteAmount) * 0.2 }
+        ],
+        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+      };
+
+      // Status history entry
+      const statusEntry = {
+        status: 'quote-submitted',
+        timestamp: new Date().toISOString(),
+        updatedBy: currentUser.uid,
+        actor: currentUser.uid,
+        notes: `Quote submitted: ${formatPrice(parseFloat(quoteAmount))}`
+      };
+
       await updateDoc(orderDoc, {
+        // Enhanced schema fields
+        quote: quoteData,
+        'budget.quoted': parseFloat(quoteAmount),
+        'timeline.estimated': estimatedDelivery ? parseInt(estimatedDelivery.replace(/\D/g, '')) || 72 : 72,
+        statusHistory: [...(requests.find(r => r.id === orderId)?.statusHistory || []), statusEntry],
+        
+        // Legacy compatibility fields
         status: 'quote-submitted',
         quoteAmount: parseFloat(quoteAmount),
         estimatedDeliveryTime: estimatedDelivery,
@@ -561,6 +764,91 @@ export const ManageRequestsComponent = () => {
     } catch (error) {
       console.error('Error submitting quote:', error);
       toast.error('Failed to submit quote');
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
+
+  // Start print job for paid orders
+  const handleStartPrint = async (orderId: string) => {
+    if (!currentUser) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setSubmittingQuote(true);
+    try {
+      const orderDoc = doc(db, 'printRequests', orderId);
+      const currentOrder = myOrders.find(o => o.id === orderId);
+      
+      // Calculate estimated completion date (add estimated timeline to current date)
+      const estimatedHours = currentOrder?.timeline?.estimated || currentOrder?.estimatedTimeline || 48;
+      const estimatedCompletion = new Date(Date.now() + estimatedHours * 60 * 60 * 1000).toISOString();
+
+      // Status history entry
+      const statusEntry = {
+        status: 'printing',
+        timestamp: new Date().toISOString(),
+        updatedBy: currentUser.uid,
+        actor: currentUser.uid,
+        notes: 'Print job started by provider'
+      };
+
+      await updateDoc(orderDoc, {
+        // Enhanced schema fields
+        'timeline.estimatedCompletion': estimatedCompletion,
+        statusHistory: [...(currentOrder?.statusHistory || []), statusEntry],
+        
+        // Legacy compatibility fields
+        status: 'printing',
+        updatedAt: serverTimestamp()
+      });
+
+      toast.success('Print job started successfully!');
+    } catch (error) {
+      console.error('Error starting print job:', error);
+      toast.error('Failed to start print job');
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
+
+  // Complete print job
+  const handleCompletePrint = async (orderId: string) => {
+    if (!currentUser) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setSubmittingQuote(true);
+    try {
+      const orderDoc = doc(db, 'printRequests', orderId);
+      const currentOrder = myOrders.find(o => o.id === orderId);
+
+      // Status history entry
+      const statusEntry = {
+        status: 'completed',
+        timestamp: new Date().toISOString(),
+        updatedBy: currentUser.uid,
+        actor: currentUser.uid,
+        notes: 'Print job completed by provider'
+      };
+
+      await updateDoc(orderDoc, {
+        // Enhanced schema fields
+        'timeline.actualCompletion': new Date().toISOString(),
+        'budget.final': currentOrder?.quote?.amount || currentOrder?.quoteAmount || currentOrder?.estimatedCost,
+        statusHistory: [...(currentOrder?.statusHistory || []), statusEntry],
+        
+        // Legacy compatibility fields
+        status: 'completed',
+        updatedAt: serverTimestamp()
+      });
+
+      toast.success('Print job completed successfully!');
+    } catch (error) {
+      console.error('Error completing print job:', error);
+      toast.error('Failed to complete print job');
     } finally {
       setSubmittingQuote(false);
     }
@@ -595,7 +883,8 @@ export const ManageRequestsComponent = () => {
       case 'accepted': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
       case 'quote-submitted': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
       case 'paid': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'in-progress': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      case 'printing': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      case 'in-progress': return 'bg-orange-500/20 text-orange-400 border-orange-500/30'; // Legacy compatibility
       case 'completed': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
       default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
@@ -908,6 +1197,8 @@ export const ManageRequestsComponent = () => {
                     key={order.id}
                     order={order}
                     onSubmitQuote={handleSubmitQuote}
+                    onStartPrint={handleStartPrint}
+                    onCompletePrint={handleCompletePrint}
                     quoteAmount={quoteAmount}
                     setQuoteAmount={setQuoteAmount}
                     estimatedDelivery={estimatedDelivery}

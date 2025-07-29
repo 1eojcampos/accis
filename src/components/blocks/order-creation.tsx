@@ -12,6 +12,7 @@ import { Slider } from "@/components/ui/slider"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { orderAPI } from "@/lib/api"
+import { useAuth } from "@/contexts/auth-context"
 
 interface OrderCreationProps {
   selectedProvider?: any
@@ -40,6 +41,7 @@ const qualitySettings = [
 ]
 
 export default function OrderCreation({ selectedProvider, onBack }: OrderCreationProps) {
+  const { currentUser: user } = useAuth()
   const [currentStep, setCurrentStep] = useState(1)
   const [files, setFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
@@ -162,23 +164,85 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
     try {
       const estimate = calculateEstimate()
       
-      // Convert files to a format suitable for API
-      const fileData = files.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified
-      }))
-
+      // Enhanced schema structure for order data
       const orderData = {
-        files: fileData,
+        // Customer information (required by backend)
+        customerId: user?.uid || '',
+        customerEmail: user?.email || '',
+        customerName: user?.displayName || 'Unknown User',
+        
+        // Enhanced nested schema structure
+        enhancedFiles: {
+          uploaded: files.map(file => ({
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: file.lastModified,
+            uploadedAt: new Date().toISOString(),
+            status: 'uploaded'
+          })),
+          totalCount: files.length,
+          totalSize: files.reduce((sum, file) => sum + file.size, 0)
+        },
+        
+        enhancedRequirements: {
+          material: selectedMaterial,
+          quality: selectedQuality,
+          quantity,
+          specifications: requirements || '',
+          location: location || 'Default Location'
+        },
+        
+        timeline: {
+          requested: null, // Customer can optionally specify
+          estimated: estimate.timeline,
+          actual: null     // Will be updated during production
+        },
+        
+        budget: {
+          customerMax: null, // Customer can set maximum budget
+          estimated: estimate.cost,
+          quoted: null,      // Provider quote
+          final: null        // Final cost
+        },
+        
+        // Status tracking with history
+        status: 'pending',
+        statusHistory: [{
+          status: 'pending',
+          timestamp: new Date().toISOString(),
+          updatedBy: user?.uid || 'anonymous',
+          notes: 'Order submitted by customer'
+        }],
+        
+        // Provider information (initially null)
+        providerId: selectedProvider?.id || null,
+        providerName: selectedProvider?.name || null,
+        providerEmail: null,
+        providerNotes: null,
+        
+        // Quote information (initially null)
+        quote: null,
+        
+        // Timestamps
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        
+        // Legacy compatibility fields for existing backend API (required)
+        files: files.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        })),
         material: selectedMaterial,
         quality: selectedQuality,
         quantity,
-        requirements,
+        requirements: requirements || '',
         location: location || 'Default Location',
         estimatedCost: estimate.cost,
         estimatedTimeline: estimate.timeline,
+        
         // Include selected provider information if available
         ...(selectedProvider && {
           preferredProviderId: selectedProvider.id,
@@ -186,7 +250,7 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
         })
       }
 
-      console.log('Submitting order:', orderData)
+      console.log('Submitting order with enhanced schema:', orderData)
       console.log('API URL:', process.env.NEXT_PUBLIC_API_URL)
       
       const response = await orderAPI.create(orderData)
