@@ -457,6 +457,19 @@ export default function HomePage() {
           return null
         }
         return <OrderCreation selectedProvider={selectedProvider} onBack={handleBackToBrowse} />
+      case 'track-orders':
+        // Protect this section - redirect if not logged in, only available for customers
+        if (!userLoggedIn) {
+          window.location.href = '/auth/signin'
+          return null
+        }
+        // Only allow customers to access track orders
+        if (userRole !== 'customer') {
+          // Redirect providers to their dashboard since they don't have track orders
+          setCurrentSection('provider-dashboard')
+          return null
+        }
+        return <OrderTracking />
       case 'customer-dashboard':
         // Protect this section - only customers can access
         if (!userLoggedIn || userRole !== 'customer') {
