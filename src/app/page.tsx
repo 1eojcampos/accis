@@ -209,12 +209,6 @@ export default function HomePage() {
       description: 'View and respond to print requests'
     },
     { 
-      key: 'track-orders' as AppSection, 
-      label: 'Track Orders', 
-      icon: Package2,
-      description: 'Update order status and progress'
-    },
-    { 
       key: 'provider-dashboard' as AppSection, 
       label: 'Provider Dashboard', 
       icon: BarChart3,
@@ -463,13 +457,6 @@ export default function HomePage() {
           return null
         }
         return <OrderCreation selectedProvider={selectedProvider} onBack={handleBackToBrowse} />
-      case 'track-orders':
-        // Protect this section - redirect if not logged in
-        if (!userLoggedIn) {
-          window.location.href = '/auth/signin'
-          return null
-        }
-        return <OrderTracking />
       case 'customer-dashboard':
         // Protect this section - only customers can access
         if (!userLoggedIn || userRole !== 'customer') {
