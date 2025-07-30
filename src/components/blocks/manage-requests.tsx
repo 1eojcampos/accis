@@ -415,15 +415,8 @@ const RequestCard: React.FC<RequestCardProps> = ({
 // MyOrderCard component for provider's accepted orders
 interface MyOrderCardProps {
   order: PrintRequest;
-  onSubmitQuote: (orderId: string) => void;
   onStartPrint: (orderId: string) => void;
   onCompletePrint: (orderId: string) => void;
-  quoteAmount: string;
-  setQuoteAmount: (amount: string) => void;
-  estimatedDelivery: string;
-  setEstimatedDelivery: (delivery: string) => void;
-  quoteNotes: string;
-  setQuoteNotes: (notes: string) => void;
   submittingQuote: boolean;
   formatPrice: (price: number) => string;
   formatDate: (timestamp: any) => string;
@@ -433,22 +426,14 @@ interface MyOrderCardProps {
 
 const MyOrderCard: React.FC<MyOrderCardProps> = ({
   order,
-  onSubmitQuote,
   onStartPrint,
   onCompletePrint,
-  quoteAmount,
-  setQuoteAmount,
-  estimatedDelivery,
-  setEstimatedDelivery,
-  quoteNotes,
-  setQuoteNotes,
   submittingQuote,
   formatPrice,
   formatDate,
   formatFileSize,
   getStatusColor
 }) => {
-  const canSubmitQuote = order.status === 'quote-submitted';
   const isPaid = order.status === 'paid';  // Fixed: Changed from quote-accepted to paid
   const isQuoteSubmitted = order.status === 'quote-submitted';
   const isPrinting = order.status === 'printing';
@@ -576,53 +561,6 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           <div>
             <h4 className="font-medium mb-2">Requirements</h4>
             <p className="text-sm text-muted-foreground">{order.requirements}</p>
-          </div>
-        )}
-
-        {/* Quote submission form */}
-        {canSubmitQuote && (
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-4">Submit Quote</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="quote-amount">Quote Amount ($)</Label>
-                <Input
-                  id="quote-amount"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={quoteAmount}
-                  onChange={(e) => setQuoteAmount(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="delivery-time">Estimated Delivery</Label>
-                <Input
-                  id="delivery-time"
-                  type="date"
-                  value={estimatedDelivery}
-                  onChange={(e) => setEstimatedDelivery(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <Label htmlFor="quote-notes">Additional Notes (Optional)</Label>
-              <Textarea
-                id="quote-notes"
-                placeholder="Any additional information for the customer..."
-                value={quoteNotes}
-                onChange={(e) => setQuoteNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <Button 
-              onClick={() => onSubmitQuote(order.id)}
-              disabled={submittingQuote || !quoteAmount}
-              className="mt-4"
-            >
-              {submittingQuote && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Submit Quote
-            </Button>
           </div>
         )}
 
@@ -1419,15 +1357,8 @@ export const ManageRequestsComponent = () => {
                   <MyOrderCard 
                     key={order.id}
                     order={order}
-                    onSubmitQuote={handleSubmitQuote}
                     onStartPrint={handleStartPrint}
                     onCompletePrint={handleCompletePrint}
-                    quoteAmount={quoteAmount}
-                    setQuoteAmount={setQuoteAmount}
-                    estimatedDelivery={estimatedDelivery}
-                    setEstimatedDelivery={setEstimatedDelivery}
-                    quoteNotes={quoteNotes}
-                    setQuoteNotes={setQuoteNotes}
                     submittingQuote={submittingQuote}
                     formatPrice={formatPrice}
                     formatDate={formatDate}
