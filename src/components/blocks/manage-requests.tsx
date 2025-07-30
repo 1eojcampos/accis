@@ -499,26 +499,6 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Mark as Complete button */}
-        {isPrinting && !isCompleted && (
-          <Button
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-            onClick={() => onCompletePrint(order.id)}
-            disabled={submittingQuote}
-          >
-            {submittingQuote ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Completing Print Job...
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Mark as Complete
-              </>
-            )}
-          </Button>
-        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h4 className="font-medium mb-2">Print Specifications</h4>
