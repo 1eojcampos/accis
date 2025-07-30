@@ -579,11 +579,6 @@ export default function HomePage() {
                 </p>
               </div>
               
-              {/* Provider Orders Management */}
-              <div className="mb-8">
-                <ProviderOrdersManagement />
-              </div>
-              
               {/* Provider Stats */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <Card className="p-6">
@@ -604,45 +599,10 @@ export default function HomePage() {
                 </Card>
               </div>
 
-              {/* Order History */}
-              <Card className="p-6">
-                <h3 className="text-xl font-semibold text-foreground mb-4">Order History</h3>
-                <div className="space-y-4">
-                  {[
-                    { id: '#3045', item: 'Phone Case', status: 'Completed', date: '2024-01-15', amount: '$45', customer: 'John D.' },
-                    { id: '#3044', item: 'Miniature Figure', status: 'In Progress', date: '2024-01-14', amount: '$67', customer: 'Sarah M.' },
-                    { id: '#3043', item: 'Prototype Parts', status: 'Started', date: '2024-01-13', amount: '$125', customer: 'TechCorp' },
-                    { id: '#3042', item: 'Custom Bracket', status: 'Completed', date: '2024-01-12', amount: '$32', customer: 'Mike R.' },
-                    { id: '#3041', item: 'Jewelry Design', status: 'Completed', date: '2024-01-10', amount: '$89', customer: 'Emma L.' }
-                  ].map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="font-mono text-sm text-muted-foreground">{order.id}</div>
-                        <div>
-                          <div className="font-medium text-foreground">{order.item}</div>
-                          <div className="text-sm text-muted-foreground">Customer: {order.customer} • {order.date}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <Badge 
-                          className={`${
-                            order.status === 'Completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : order.status === 'In Progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : order.status === 'Started'
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {order.status}
-                        </Badge>
-                        <div className="font-semibold text-foreground">{order.amount}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              {/* Order History - Using the real component */}
+              <div className="mb-8">
+                <ProviderOrdersManagement />
+              </div>
             </div>
           </div>
         )
