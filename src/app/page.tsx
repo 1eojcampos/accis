@@ -286,7 +286,7 @@ export default function HomePage() {
             <img 
               src="/accis-logo.svg" 
               alt="Accis Logo" 
-              className="w-12 h-12 object-contain"
+              className="w-14 h-14 object-contain"
             />
             <span className="font-semibold text-foreground text-xl">Accis</span>
           </div>
