@@ -13,5 +13,8 @@
   "functions": {
     "source": "backend",
     "runtime": "nodejs18"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

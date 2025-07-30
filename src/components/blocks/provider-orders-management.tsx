@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "sonner"
+import { getFileDownloadUrl } from "@/lib/firebase/storage"
 import { 
   Package, 
   Clock, 
@@ -18,26 +20,61 @@ import {
   AlertCircle,
   FileText
 } from "lucide-react"
+
+interface FileInfo {
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+  downloadUrl?: string;
+  storagePath?: string;
+}
 import { orderAPI } from "@/lib/api"
 
 interface Order {
-  id: string
-  customerId: string
-  files: any[]
-  material: string
-  quality: string
-  quantity: number
-  requirements: string
-  location: string
-  estimatedCost: number
-  estimatedTimeline: number
-  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'paid' | 'printing'
-  createdAt: any
-  updatedAt: any
-  providerId?: string
-  providerNotes?: string
-  actualCost?: number
-  actualTimeline?: number
+  id: string;
+  customerId: string;
+  customerEmail?: string;
+  customerName?: string;
+
+  files: Array<FileInfo>;
+
+  material: string;
+  quality: string;
+  quantity: number;
+  requirements: string;
+  location: string;
+  estimatedCost: number;
+  estimatedTimeline: number;
+  
+  status: 'pending' | 'accepted' | 'rejected' | 'in_progress' | 'completed' | 'quote-requested' | 'quote-submitted' | 'quote-accepted' | 'paid' | 'printing';
+  
+  // Enhanced data
+  enhancedFiles?: {
+    uploaded: Array<FileInfo>;
+    totalCount: number;
+    totalSize: number;
+  };
+
+  timeline?: {
+    estimated: number;
+    actual?: number;
+    estimatedCompletion?: string;
+    actualCompletion?: string;
+  };
+
+  budget?: {
+    estimated: number;
+    quoted?: number;
+    final?: number;
+  };
+
+  createdAt: any;
+  updatedAt: any;
+  providerId?: string;
+  providerNotes?: string;
+  actualCost?: number;
+  actualTimeline?: number;
 }
 
 export default function ProviderOrdersManagement() {
@@ -149,11 +186,45 @@ export default function ProviderOrdersManagement() {
             <p className="text-sm font-medium mb-1">Files:</p>
             <div className="flex flex-wrap gap-2">
               {order.files && order.files.length > 0 ? (
-                order.files.map((file: any, index: number) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    <FileText className="w-3 h-3 mr-1" />
-                    {file.name || `File ${index + 1}`}
-                  </Badge>
+                order.files.map((file, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      <span>{file.name || `File ${index + 1}`}</span>
+                      {file.size && (
+                        <span className="text-muted-foreground">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      )}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                      onClick={async () => {
+                        try {
+                          let downloadUrl = file.downloadUrl || file.url;
+                          
+                          // If we have a storagePath but no download URL, get a fresh one
+                          if (!downloadUrl && file.storagePath) {
+                            downloadUrl = await getFileDownloadUrl(file.storagePath);
+                          }
+                          
+                          if (downloadUrl) {
+                            window.open(downloadUrl, '_blank');
+                          } else {
+                            toast.error('Download URL not available');
+                          }
+                        } catch (error) {
+                          console.error('Error getting download URL:', error);
+                          toast.error('Failed to get download URL');
+                        }
+                      }}
+                      disabled={!file.downloadUrl && !file.url && !file.storagePath}
+                    >
+                      Download
+                    </Button>
+                  </div>
                 ))
               ) : (
                 <span className="text-sm text-muted-foreground">No files uploaded</span>

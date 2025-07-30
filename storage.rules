@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to check if user owns the request/order
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Function to check if user is the provider for this request/order
+    function isProvider(requestId) {
+      return request.auth.uid == firestore.get(/databases/(default)/documents/printRequests/$(requestId)).data.providerId;
+    }
+
+    // Match any file in requests or orders folders
+    match /{type}/{requestId}/{userId}/{filename} {
+      allow read: if isAuthenticated() && 
+        (isOwner(userId) || isProvider(requestId));
+      
+      allow write: if isAuthenticated() && 
+        isOwner(userId) &&
+        request.resource.size < 100 * 1024 * 1024 && // 100MB max file size
+        request.resource.contentType.matches('application/.*|image/.*|.*/.*stl|.*/.*obj'); // Allowed file types
+    }
+  }
+}
