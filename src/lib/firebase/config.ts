@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -27,5 +28,8 @@ googleProvider.setCustomParameters({
 // Initialize Cloud Firestore and get a reference to the service
 const db = getFirestore(app);
 
-export { auth, db, googleProvider };
+// Initialize Cloud Storage and get a reference to the service
+const storage = getStorage(app);
+
+export { auth, db, googleProvider, storage };
 export default app;

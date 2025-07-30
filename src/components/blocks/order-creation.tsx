@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Upload, FileType, Package, Settings, PlusCircle, MinusCircle, MapPin, Clock, Calculator, ExternalLink, Search, CheckCircle, AlertCircle, ArrowLeft } from "lucide-react"
+import { storage } from "@/lib/firebase/config"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -164,6 +166,51 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
     try {
       const estimate = calculateEstimate()
       
+      let uploadedFiles;
+      try {
+        // Upload files to Firebase Storage first
+        uploadedFiles = await Promise.all(files.map(async (file) => {
+          try {
+            // Create a unique file path using timestamp and original name
+            const timestamp = Date.now()
+            const storagePath = `print-requests/${user?.uid}/${timestamp}-${file.name}`
+            const fileRef = ref(storage, storagePath)
+            
+            // Upload the file
+            await uploadBytes(fileRef, file)
+            
+            // Get the download URL
+            const downloadUrl = await getDownloadURL(fileRef)
+            
+            console.log(`Successfully uploaded file: ${file.name}`)
+            console.log(`Storage path: ${storagePath}`)
+            console.log(`Download URL: ${downloadUrl}`)
+            
+            return {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              lastModified: file.lastModified,
+              storagePath,
+              downloadUrl
+            }
+          } catch (error) {
+            console.error(`Error uploading file ${file.name}:`, error)
+            throw new Error(`Failed to upload file ${file.name}`)
+          }
+        }))
+      } catch (error) {
+        setSubmitError("Failed to upload one or more files. Please try again.")
+        setIsSubmitting(false)
+        return
+      }
+
+      if (!uploadedFiles) {
+        setSubmitError("No files were uploaded successfully.")
+        setIsSubmitting(false)
+        return
+      }
+      
       // Enhanced schema structure for order data
       const orderData = {
         // Customer information (required by backend)
@@ -173,13 +220,15 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
         
         // Enhanced nested schema structure
         enhancedFiles: {
-          uploaded: files.map(file => ({
+          uploaded: uploadedFiles.map(file => ({
             name: file.name,
             size: file.size,
             type: file.type,
             lastModified: file.lastModified,
             uploadedAt: new Date().toISOString(),
-            status: 'uploaded'
+            status: 'uploaded',
+            storagePath: file.storagePath,
+            downloadUrl: file.downloadUrl
           })),
           totalCount: files.length,
           totalSize: files.reduce((sum, file) => sum + file.size, 0)
@@ -229,11 +278,13 @@ export default function OrderCreation({ selectedProvider, onBack }: OrderCreatio
         updatedAt: new Date().toISOString(),
         
         // Legacy compatibility fields for existing backend API (required)
-        files: files.map(file => ({
+        files: uploadedFiles.map(file => ({
           name: file.name,
           size: file.size,
           type: file.type,
-          lastModified: file.lastModified
+          lastModified: file.lastModified,
+          storagePath: file.storagePath,
+          downloadUrl: file.downloadUrl
         })),
         material: selectedMaterial,
         quality: selectedQuality,

@@ -1,4 +1,4 @@
-import { getStorage, ref, uploadBytes, getDownloadURL, UploadResult } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc, arrayUnion, getFirestore } from 'firebase/firestore';
 import firebaseApp from './config';
 
@@ -36,7 +36,7 @@ export const uploadFile = async ({ file, requestId, userId, type }: UploadParams
     const storageRef = ref(storage, storagePath);
     
     // Upload the file
-    const snapshot: UploadResult = await uploadBytes(storageRef, file);
+    const snapshot = await uploadBytes(storageRef, file);
     
     // Get the download URL
     const downloadUrl = await getDownloadURL(snapshot.ref);

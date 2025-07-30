@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { orderAPI } from '@/lib/api';
+import { getFileDownloadUrl } from '@/lib/firebase/storage';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -126,6 +127,8 @@ interface PrintRequest {
     name: string;
     size: number;
     type: string;
+    downloadUrl?: string;
+    storagePath?: string;
   }>;
   material: string;
   quality: string;
@@ -275,12 +278,40 @@ const RequestCard: React.FC<RequestCardProps> = ({
           </div>
           <div>
             <h4 className="font-medium mb-2">Files ({request.files.length})</h4>
-            <div className="space-y-1">
-              {request.files.slice(0, 3).map((file, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="truncate">{file.name}</span>
-                  <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {request.files.map((file, index) => (
+                <div key={index} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                    onClick={async () => {
+                      try {
+                        let downloadUrl = file.downloadUrl;
+                        
+                        // If we have a storagePath but no download URL, get a fresh one
+                        if (!downloadUrl && file.storagePath) {
+                          downloadUrl = await getFileDownloadUrl(file.storagePath);
+                        }
+                        
+                        if (downloadUrl) {
+                          window.open(downloadUrl, '_blank');
+                        } else {
+                          toast.error('Download URL not available');
+                        }
+                      } catch (error) {
+                        console.error('Error getting download URL:', error);
+                        toast.error('Failed to get download URL');
+                      }
+                    }}
+                  >
+                    Download
+                  </Button>
                 </div>
               ))}
               {request.files.length > 3 && (
@@ -516,12 +547,40 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           </div>
           <div>
             <h4 className="font-medium mb-2">Files ({order.files.length})</h4>
-            <div className="space-y-1">
-              {order.files.slice(0, 3).map((file, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
-                  <span className="truncate">{file.name}</span>
-                  <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {order.files.map((file, index) => (
+                <div key={index} className="flex items-center justify-between gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="truncate">{file.name}</span>
+                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                    onClick={async () => {
+                      try {
+                        let downloadUrl = file.downloadUrl;
+                        
+                        // If we have a storagePath but no download URL, get a fresh one
+                        if (!downloadUrl && file.storagePath) {
+                          downloadUrl = await getFileDownloadUrl(file.storagePath);
+                        }
+                        
+                        if (downloadUrl) {
+                          window.open(downloadUrl, '_blank');
+                        } else {
+                          toast.error('Download URL not available');
+                        }
+                      } catch (error) {
+                        console.error('Error getting download URL:', error);
+                        toast.error('Failed to get download URL');
+                      }
+                    }}
+                  >
+                    Download
+                  </Button>
                 </div>
               ))}
               {order.files.length > 3 && (

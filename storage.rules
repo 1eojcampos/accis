@@ -16,7 +16,18 @@ service firebase.storage {
       return request.auth.uid == firestore.get(/databases/(default)/documents/printRequests/$(requestId)).data.providerId;
     }
 
-    // Match any file in requests or orders folders
+    // Match print-requests folder structure
+    match /print-requests/{userId}/{filename} {
+      allow read: if isAuthenticated() && 
+        (request.auth.uid == userId);
+      
+      allow write: if isAuthenticated() && 
+        request.auth.uid == userId &&
+        request.resource.size < 100 * 1024 * 1024 && // 100MB max file size
+        request.resource.contentType.matches('application/.*|image/.*|.*/.*stl|.*/.*obj'); // Allowed file types
+    }
+
+    // Match legacy path structure
     match /{type}/{requestId}/{userId}/{filename} {
       allow read: if isAuthenticated() && 
         (isOwner(userId) || isProvider(requestId));
