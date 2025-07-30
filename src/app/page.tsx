@@ -10,6 +10,7 @@ import OrderTracking from "@/components/blocks/order-tracking"
 import { ManagePrinters } from "@/components/blocks/manage-printers"
 import { ManageRequestsComponent } from "@/components/blocks/manage-requests"
 import ProviderOrdersManagement from "@/components/blocks/provider-orders-management"
+import CustomerOrdersManagement from "@/components/blocks/customer-orders-management"
 import { CenteredWithLogo } from "@/components/blocks/footers/centered-with-logo"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -475,6 +476,7 @@ export default function HomePage() {
           window.location.href = '/auth/signin'
           return null
         }
+        
         return (
           <div className="min-h-screen bg-background py-12 px-4">
             <div className="max-w-7xl mx-auto">
@@ -502,43 +504,10 @@ export default function HomePage() {
                 </Card>
               </div>
 
-              {/* Order History */}
-              <Card className="p-6">
-                <h3 className="text-xl font-semibold text-foreground mb-4">Order History</h3>
-                <div className="space-y-4">
-                  {[
-                    { id: '#3045', item: 'Phone Case', status: 'Completed', date: '2024-01-15', amount: '$45' },
-                    { id: '#3044', item: 'Miniature Figure', status: 'In Progress', date: '2024-01-14', amount: '$67' },
-                    { id: '#3043', item: 'Prototype Parts', status: 'Accepted', date: '2024-01-13', amount: '$125' },
-                    { id: '#3042', item: 'Custom Bracket', status: 'Completed', date: '2024-01-12', amount: '$32' },
-                    { id: '#3041', item: 'Jewelry Design', status: 'Completed', date: '2024-01-10', amount: '$89' }
-                  ].map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="font-mono text-sm text-muted-foreground">{order.id}</div>
-                        <div>
-                          <div className="font-medium text-foreground">{order.item}</div>
-                          <div className="text-sm text-muted-foreground">{order.date}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <Badge 
-                          className={`${
-                            order.status === 'Completed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : order.status === 'In Progress'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
-                        >
-                          {order.status}
-                        </Badge>
-                        <div className="font-semibold text-foreground">{order.amount}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              {/* Order History - Using the new component */}
+              <div className="mb-8">
+                <CustomerOrdersManagement />
+              </div>
             </div>
           </div>
         )

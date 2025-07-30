@@ -33,24 +33,52 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
 });
 
-// Get all print requests for a customer
-router.get('/my-requests', authenticateToken, async (req, res) => {
+// Get orders for a customer
+router.get('/customer-orders', authenticateToken, async (req, res) => {
   try {
     const requestsRef = db.collection('printRequests');
-    const snapshot = await requestsRef
+    const query = requestsRef
       .where('customerId', '==', req.user.uid)
-      .orderBy('createdAt', 'desc')
-      .get();
+      .orderBy('createdAt', 'desc');
     
+    const snapshot = await query.get();
     const requests = [];
     snapshot.forEach(doc => {
-      requests.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      // Filter status in memory to avoid complex index requirements
+      if (['pending', 'accepted', 'rejected', 'in_progress', 'completed', 
+           'quote-requested', 'quote-submitted', 'quote-accepted', 'paid', 'printing']
+           .includes(data.status)) {
+        requests.push({ id: doc.id, ...data });
+      }
     });
     
     res.json(requests);
   } catch (error) {
-    console.error('Error fetching requests:', error);
-    res.status(500).json({ error: 'Failed to fetch requests' });
+    console.error('Error fetching customer orders:', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+      details: error.details || 'No additional details'
+    });
+
+    // Check if this is a missing index error
+    if (error.code === 'FAILED_PRECONDITION' || 
+        (error.message && error.message.includes('index'))) {
+      console.error('Missing required Firestore index. Please create a composite index for:');
+      console.error('Collection: printRequests');
+      console.error('Fields: customerId (ascending) + createdAt (descending)');
+      return res.status(500).json({ 
+        error: 'Database index not configured',
+        details: 'The system requires a database configuration update. Please contact support.'
+      });
+    }
+
+    // For other types of errors
+    res.status(500).json({ 
+      error: 'Failed to fetch customer orders',
+      details: error.message
+    });
   }
 });
 
@@ -176,13 +204,7 @@ router.put('/:id/respond', authenticateToken, async (req, res) => {
     const requestId = req.params.id;
     const { action, quoteAmount, estimatedDelivery, notes } = req.body;
     
-    // Debug: Log the received data
-    console.log('Received payload:', req.body);
-    console.log('Extracted fields:', { action, quoteAmount, estimatedDelivery, notes });
-    
-    // Support both legacy "accept/reject" and new "quote" action
     if (!['accept', 'reject', 'quote'].includes(action)) {
-      console.log('Invalid action received:', action);
       return res.status(400).json({ error: 'Action must be either "accept", "reject", or "quote"' });
     }
 
@@ -193,32 +215,14 @@ router.put('/:id/respond', authenticateToken, async (req, res) => {
     }
 
     const requestData = requestDoc.data();
-    console.log('Request data found:', {
-      id: requestId,
-      status: requestData.status,
-      customerId: requestData.customerId,
-      hasProviderId: !!requestData.providerId
-    });
-    
     if (requestData.status !== 'quote-requested') {
-      console.log('Request not available - current status:', requestData.status);
       return res.status(400).json({ error: 'This request is no longer available' });
     }
 
     // Don't allow customer to respond to their own request
     if (requestData.customerId === req.user.uid) {
-      console.log('User trying to respond to own request:', {
-        requestCustomerId: requestData.customerId,
-        currentUserId: req.user.uid
-      });
       return res.status(400).json({ error: 'Cannot respond to your own request' });
     }
-
-    console.log('User validation passed:', {
-      requestCustomerId: requestData.customerId,
-      currentUserId: req.user.uid,
-      action: action
-    });
 
     let updates = {
       providerId: req.user.uid,
@@ -229,14 +233,12 @@ router.put('/:id/respond', authenticateToken, async (req, res) => {
     if (action === 'quote') {
       // New quote submission workflow
       if (!quoteAmount) {
-        console.log('Quote amount missing:', quoteAmount);
         return res.status(400).json({ error: 'Quote amount is required' });
       }
 
       // Validate quote amount is a valid number
       const amount = parseFloat(quoteAmount);
       if (isNaN(amount) || amount <= 0) {
-        console.log('Invalid quote amount:', quoteAmount, 'parsed as:', amount);
         return res.status(400).json({ error: 'Quote amount must be a valid positive number' });
       }
 
@@ -356,12 +358,7 @@ router.put('/:id/respond', authenticateToken, async (req, res) => {
       }
     }
     
-    console.log('Final updates object for request', requestId, ':', JSON.stringify(updates, null, 2));
-    
     await db.collection('printRequests').doc(requestId).update(updates);
-    
-    console.log('Successfully updated request:', requestId, 'with status:', updates.status);
-    
     res.json({ id: requestId, ...updates });
   } catch (error) {
     console.error('Error responding to request:', error);

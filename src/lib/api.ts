@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api-wwmdj6js5q-uc.a.run.app/api';
 
 if (!process.env.NEXT_PUBLIC_API_URL) {
   console.warn('NEXT_PUBLIC_API_URL not set, using default:', API_URL);
@@ -69,7 +69,7 @@ export const orderAPI = {
   create: (orderData: any) => api.post('/requests', orderData),
   
   // Get orders for customer
-  getMyOrders: () => api.get('/requests/my-requests'),
+  getCustomerOrders: () => api.get('/requests/customer-orders'),
   
   // Get available orders for providers to accept
   getAvailableOrders: (location?: string) => {
