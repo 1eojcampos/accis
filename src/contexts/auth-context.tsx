@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     localStorage.removeItem('token');
     await signOut(auth);
-    router.push('/login');
+    router.push('/auth/signin');
   };
 
   const resetPassword = (email: string) => {

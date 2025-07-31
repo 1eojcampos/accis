@@ -235,7 +235,7 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
             Find Local 3D Printing Services
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Discover professional 3D printing providers in your area. Enter your ZIP code to find nearby services and compare prices, capabilities, and availability.
+            Discover 3D printing providers in your area. Enter your ZIP code to find nearby services and compare prices, capabilities, and availability.
           </p>
         </div>
 

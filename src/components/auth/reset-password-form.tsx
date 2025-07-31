@@ -107,7 +107,7 @@ export const PasswordResetForm = ({
           <CardContent>
             <Button 
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-              onClick={() => window.location.href = '/login'}
+              onClick={() => window.location.href = '/auth/signin'}
             >
               Continue to Sign In
             </Button>
@@ -285,7 +285,7 @@ export const PasswordResetForm = ({
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Remember your password?{' '}
-              <a href="/login" className="font-medium text-primary hover:underline">
+              <a href="/auth/signin" className="font-medium text-primary hover:underline">
                 Back to Sign In
               </a>
             </p>
