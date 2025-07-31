@@ -14,7 +14,7 @@ type UseCarouselParameters = Parameters<typeof useEmblaCarousel>[0]
 
 interface CarouselProps {
   opts?: UseCarouselParameters
-  plugins?: Parameters<typeof useEmblaCarousel>[1]
+  plugins?: UseEmblaCarouselType[2]
   orientation?: "horizontal" | "vertical"
   setApi?: (api: CarouselApi) => void
 }

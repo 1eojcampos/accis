@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { printerAPI } from '@/lib/api';
+import { ref } from 'firebase/storage';
+import { storage, getFileDownloadUrl, uploadFile, deleteFile } from '@/lib/firebase/storage';
+import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +18,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Printer, Plus, Edit, Trash2, Search, Settings, MapPin, Zap, ZapOff, Filter, Box, DollarSign } from 'lucide-react';
+import { Printer, Plus, Edit, Trash2, Search, Settings, MapPin, Zap, ZapOff, Filter, Box, DollarSign, Loader2 } from 'lucide-react';
 
 interface Printer {
   id: string;
@@ -32,6 +37,7 @@ interface Printer {
   location: string;  // ZIP code for the printer's location
   description: string;
   condition: 'Excellent' | 'Good' | 'Fair' | 'Needs Maintenance';
+  imageUrls: string[];  // Array of Firebase Storage image URLs
   createdAt: string;  // ISO string of when the printer was added
   updatedAt?: string; // ISO string of last update
 }
@@ -66,7 +72,8 @@ export const ManagePrinters = () => {
     available: true,
     location: '',  // ZIP code
     description: '',
-    condition: 'Excellent'
+    condition: 'Excellent',
+    imageUrls: []
   };
 
   const [formData, setFormData] = useState<Partial<Printer>>(defaultFormData);
@@ -169,6 +176,7 @@ export const ManagePrinters = () => {
           location: data.location || '',
           description: data.description || '',
           condition: data.condition || 'Excellent',
+          imageUrls: data.imageUrls || [],
           createdAt: new Date().toISOString()
         };
         
@@ -269,15 +277,110 @@ export const ManagePrinters = () => {
 
   const PrinterModal = ({ isOpen, onOpenChange, title, onSave, initialData }: PrinterModalProps) => {
     const [localFormData, setLocalFormData] = useState<Partial<Printer>>(initialData);
+    const [selectedImages, setSelectedImages] = useState<File[]>([]);
+    const [uploadProgress, setUploadProgress] = useState<number>(0);
+    const [isUploading, setIsUploading] = useState(false);
+    const { currentUser } = useAuth();
 
     // Reset form when modal opens with new initialData
     useEffect(() => {
       setLocalFormData(initialData);
+      setSelectedImages([]);
+      setUploadProgress(0);
     }, [initialData]);
 
-    const handleSave = () => {
-      onSave(localFormData);
-      onOpenChange(false);
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
+        const newFiles = Array.from(e.target.files).filter(file => 
+          file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024 // 5MB limit
+        );
+        setSelectedImages(prev => [...prev, ...newFiles]);
+      }
+    };
+
+    const handleRemoveImage = (index: number) => {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleRemoveExistingImage = async (url: string) => {
+      try {
+        // Delete from Firebase Storage using the helper function
+        await deleteFile(url);
+        
+        // Update form data
+        setLocalFormData(prev => ({
+          ...prev,
+          imageUrls: prev.imageUrls?.filter(existingUrl => existingUrl !== url) || []
+        }));
+      } catch (error) {
+        console.error('Error removing image:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to remove image"
+        });
+      }
+    };
+
+    const uploadImages = async (): Promise<string[]> => {
+      if (!currentUser || !selectedImages.length) return [];
+
+      const uploadedUrls: string[] = [];
+      setIsUploading(true);
+      const totalFiles = selectedImages.length;
+      
+      try {
+        for (let i = 0; i < selectedImages.length; i++) {
+          const file = selectedImages[i];
+          const fileName = `${Date.now()}-${file.name}`;
+          const storagePath = `printers/${currentUser.uid}/${localFormData.id || 'new'}/${fileName}`;
+          
+          const uploadResult = await uploadFile({
+            file,
+            requestId: localFormData.id || 'new',
+            userId: currentUser.uid,
+            type: 'printers'
+          });
+          uploadedUrls.push(uploadResult.downloadUrl);
+          
+          setUploadProgress(((i + 1) / totalFiles) * 100);
+        }
+        return uploadedUrls;
+      } catch (error) {
+        console.error('Error uploading images:', error);
+        throw error;
+      } finally {
+        setIsUploading(false);
+        setUploadProgress(0);
+      }
+    };
+
+    const handleSave = async () => {
+      try {
+        setIsUploading(true);
+        const uploadedUrls = await uploadImages();
+        
+        // Combine existing and new image URLs
+        const updatedFormData = {
+          ...localFormData,
+          imageUrls: [
+            ...(localFormData.imageUrls || []),
+            ...uploadedUrls
+          ]
+        };
+        
+        await onSave(updatedFormData);
+        onOpenChange(false);
+      } catch (error) {
+        console.error('Error saving printer:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to save printer"
+        });
+      } finally {
+        setIsUploading(false);
+      }
     };
 
     return (
@@ -480,14 +583,111 @@ export const ManagePrinters = () => {
                 />
               </div>
             </div>
+
+            <Separator />
+
+            {/* Image Upload Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Printer Images</h3>
+              <div className="space-y-4">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="cursor-pointer"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Upload up to 5 images (max 5MB each). Supported formats: JPG, PNG, WebP
+                </p>
+
+                {/* Existing Images */}
+                {localFormData.imageUrls && localFormData.imageUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Existing Images</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {localFormData.imageUrls.map((url, index) => (
+                        <div key={url} className="relative group aspect-square">
+                          <img
+                            src={url}
+                            alt={`Printer image ${index + 1}`}
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveExistingImage(url)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Images Preview */}
+                {selectedImages.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Selected Images</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {selectedImages.map((file, index) => (
+                        <div key={index} className="relative group aspect-square">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`Selected image ${index + 1}`}
+                            className="w-full h-full object-cover rounded-md"
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleRemoveImage(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload Progress */}
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-600 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-center text-muted-foreground">
+                      Uploading images... {Math.round(uploadProgress)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700">
-              {title.includes('Add') ? 'Add Printer' : 'Save Changes'}
+            <Button 
+              onClick={handleSave} 
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                title.includes('Add') ? 'Add Printer' : 'Save Changes'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -648,6 +848,30 @@ export const ManagePrinters = () => {
               </CardHeader>
               
               <CardContent className="space-y-4">
+                {/* Image Carousel */}
+                {printer.imageUrls && printer.imageUrls.length > 0 && (
+                  <div className="flex justify-center items-center mb-4" style={{ minHeight: 0, minWidth: 0 }}>
+                    <Carousel>
+                      <CarouselContent>
+                        {printer.imageUrls.map((url, index) => (
+                          <CarouselItem key={url}>
+                            <div className="w-full h-full">
+                              <img
+                                src={url}
+                                alt={`${printer.name} - Image ${index + 1}`}
+                                className="object-cover rounded-lg mx-auto"
+                                style={{ maxWidth: '320px', maxHeight: '240px', width: '100%', height: 'auto' }}
+                              />
+                            </div>
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                      <CarouselPrevious />
+                      <CarouselNext />
+                    </Carousel>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <h4 className="font-medium text-sm text-muted-foreground mb-2 flex items-center gap-1">

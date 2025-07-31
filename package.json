@@ -4,13 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build", 
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "deploy": "firebase deploy",
     "migrate:dev": "node scripts/migrate-firestore.js all",
     "migrate:users": "node scripts/migrate-firestore.js users",
-    "migrate:printers": "node scripts/migrate-firestore.js printers", 
+    "migrate:printers": "node scripts/migrate-firestore.js printers",
     "migrate:requests": "node scripts/migrate-firestore.js requests",
     "validate:migration": "node scripts/validate-migration.js"
   },
@@ -41,6 +41,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-tabs": "^1.1.12",
+    "@radix-ui/react-toast": "^1.2.14",
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",

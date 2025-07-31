@@ -1,4 +1,4 @@
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { doc, updateDoc, arrayUnion, getFirestore } from 'firebase/firestore';
 import firebaseApp from './config';
 
@@ -17,7 +17,7 @@ interface UploadParams {
   file: File;
   requestId: string;
   userId: string;
-  type: 'requests' | 'orders';
+  type: 'requests' | 'orders' | 'printers';
 }
 
 const sanitizeFileName = (fileName: string): string => {
@@ -64,6 +64,18 @@ export const getFileDownloadUrl = async (filePath: string): Promise<string> => {
   }
 };
 
+export const deleteFile = async (url: string): Promise<void> => {
+  try {
+    // Get the storage reference from the URL
+    const fileRef = ref(storage, url);
+    // Delete the file
+    await deleteObject(fileRef);
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    throw error;
+  }
+};
+
 export const uploadFileWithMetadata = async (
   { file, requestId, userId, type }: UploadParams,
   updateFirestore: boolean = true
@@ -102,3 +114,5 @@ export const uploadFileWithMetadata = async (
     throw error;
   }
 };
+
+export { storage };
