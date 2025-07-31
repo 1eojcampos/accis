@@ -210,8 +210,8 @@ const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   return (
-    <AccordionItem value={request.id} className="border rounded-lg">
-      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+    <AccordionItem value={request.id} className="border rounded-lg bg-slate-800/50 backdrop-blur-sm">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-slate-700/30">
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center gap-3 text-left">
             <Avatar className="w-10 h-10">
@@ -244,7 +244,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
+      <AccordionContent className="px-4 pb-4 bg-slate-900/30">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -433,8 +433,8 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   const isCompleted = order.status === 'completed';
 
   return (
-    <AccordionItem value={order.id} className="border rounded-lg">
-      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+    <AccordionItem value={order.id} className="border rounded-lg bg-slate-800/50 backdrop-blur-sm">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-slate-700/30">
         <div className="flex justify-between items-center w-full">
           <div className="flex items-center gap-3 text-left">
             <Avatar className="w-10 h-10">
@@ -479,7 +479,7 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="px-4 pb-4">
+      <AccordionContent className="px-4 pb-4 bg-slate-900/30">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -1046,7 +1046,7 @@ export const ManageRequestsComponent = () => {
       case 'in-progress': return 'bg-orange-500/20 text-orange-400 border-orange-500/30'; // Legacy compatibility
       case 'completed': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
       case 'rejected': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      default: return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
     }
   };
 
