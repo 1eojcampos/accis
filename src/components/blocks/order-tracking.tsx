@@ -565,7 +565,7 @@ export default function OrderTracking() {
         'budget.final': paymentData.amount,
         statusHistory: [...(currentOrder?.statusHistory || []), statusEntry],
         
-        // Legacy compatibility fields
+        // Legacy compatibility fields  
         status: 'paid',
         paidAt: serverTimestamp(),
         updatedAt: serverTimestamp()

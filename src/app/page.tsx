@@ -24,7 +24,6 @@ import {
   X,
   User,
   Bell,
-  ShoppingCart,
   Settings,
   LogOut,
   Users,
@@ -42,7 +41,6 @@ export default function HomePage() {
   const [userLoggedIn, setUserLoggedIn] = useState(false)
   const [userRole, setUserRole] = useState<UserRole>(null)
   const [notifications] = useState(3)
-  const [cartItems] = useState(2)
   const [isLoading, setIsLoading] = useState(true)
   const [showSuccessMessage, setShowSuccessMessage] = useState(false)
   const [selectedProvider, setSelectedProvider] = useState<any>(null)
@@ -310,20 +308,6 @@ export default function HomePage() {
           <div className="flex items-center space-x-4">
             {userLoggedIn ? (
               <>
-                {/* Cart - Only show for customers */}
-                {userRole === 'customer' && (
-                  <button className="relative p-2 text-muted-foreground hover:text-foreground">
-                    <ShoppingCart className="w-5 h-5" />
-                    {cartItems > 0 && (
-                      <Badge 
-                        className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-primary text-primary-foreground"
-                      >
-                        {cartItems}
-                      </Badge>
-                    )}
-                  </button>
-                )}
-
                 {/* Notifications */}
                 <button className="relative p-2 text-muted-foreground hover:text-foreground">
                   <Bell className="w-5 h-5" />

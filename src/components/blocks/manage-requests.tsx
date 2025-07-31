@@ -26,6 +26,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { toast } from 'sonner';
 import {
   ClipboardList,
@@ -209,10 +210,10 @@ const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+    <AccordionItem value={request.id} className="border rounded-lg">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-3 text-left">
             <Avatar className="w-10 h-10">
               <AvatarFallback>
                 {request.customerEmail ? request.customerEmail.slice(0, 2).toUpperCase() : 'CU'}
@@ -227,188 +228,180 @@ const RequestCard: React.FC<RequestCardProps> = ({
             <Badge className={getStatusColor(request.status)}>
               {request.status}
             </Badge>
-            {request.status === 'quote-requested' && !request.providerId ? (
-              !showQuoteForm ? (
-                <Button 
-                  onClick={() => setShowQuoteForm(true)}
-                  size="sm"
-                  variant="default"
-                >
-                  Accept & Quote
-                </Button>
-              ) : (
-                <Button 
-                  onClick={() => setShowQuoteForm(false)}
-                  size="sm"
-                  variant="outline"
-                >
-                  Cancel
-                </Button>
-              )
-            ) : (
-              <Badge variant="secondary" className="text-muted-foreground">
-                {request.providerId ? 'Assigned' : 'No longer available'}
-              </Badge>
+            <span className="text-sm font-medium">{formatPrice(request.estimatedCost)}</span>
+            {request.status === 'quote-requested' && !request.providerId && (
+              <Button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowQuoteForm(true);
+                }}
+                size="sm"
+                variant="default"
+              >
+                Accept & Quote
+              </Button>
             )}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 className="font-medium mb-2">Print Specifications</h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Material:</span>
-                <span>{request.material}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quality:</span>
-                <span>{request.quality}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quantity:</span>
-                <span>{request.quantity}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Estimated Cost:</span>
-                <span className="font-medium">{formatPrice(request.estimatedCost)}</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-medium mb-2">Files ({request.files.length})</h4>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {request.files.map((file, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="truncate">{file.name}</span>
-                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
-                    onClick={async () => {
-                      try {
-                        let downloadUrl = file.downloadUrl;
-                        
-                        // If we have a storagePath but no download URL, get a fresh one
-                        if (!downloadUrl && file.storagePath) {
-                          downloadUrl = await getFileDownloadUrl(file.storagePath);
-                        }
-                        
-                        if (downloadUrl) {
-                          window.open(downloadUrl, '_blank');
-                        } else {
-                          toast.error('Download URL not available');
-                        }
-                      } catch (error) {
-                        console.error('Error getting download URL:', error);
-                        toast.error('Failed to get download URL');
-                      }
-                    }}
-                  >
-                    Download
-                  </Button>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium mb-2">Print Specifications</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Material:</span>
+                  <span>{request.material}</span>
                 </div>
-              ))}
-              {request.files.length > 3 && (
-                <p className="text-sm text-muted-foreground">
-                  +{request.files.length - 3} more files
-                </p>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quality:</span>
+                  <span>{request.quality}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quantity:</span>
+                  <span>{request.quantity}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Estimated Cost:</span>
+                  <span className="font-medium">{formatPrice(request.estimatedCost)}</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Files ({request.files.length})</h4>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {request.files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate">{file.name}</span>
+                      <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                      onClick={async () => {
+                        try {
+                          let downloadUrl = file.downloadUrl;
+                          
+                          // If we have a storagePath but no download URL, get a fresh one
+                          if (!downloadUrl && file.storagePath) {
+                            downloadUrl = await getFileDownloadUrl(file.storagePath);
+                          }
+                          
+                          if (downloadUrl) {
+                            window.open(downloadUrl, '_blank');
+                          } else {
+                            toast.error('Download URL not available');
+                          }
+                        } catch (error) {
+                          console.error('Error getting download URL:', error);
+                          toast.error('Failed to get download URL');
+                        }
+                      }}
+                    >
+                      Download
+                    </Button>
+                  </div>
+                ))}
+                {request.files.length > 3 && (
+                  <p className="text-sm text-muted-foreground">
+                    +{request.files.length - 3} more files
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        
-        {request.requirements && (
-          <div>
-            <h4 className="font-medium mb-2">Requirements</h4>
-            <p className="text-sm text-muted-foreground">{request.requirements}</p>
-          </div>
-        )}
-        
-        {request.location && (
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span>{request.location}</span>
-          </div>
-        )}
+          
+          {request.requirements && (
+            <div>
+              <h4 className="font-medium mb-2">Requirements</h4>
+              <p className="text-sm text-muted-foreground">{request.requirements}</p>
+            </div>
+          )}
+          
+          {request.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span>{request.location}</span>
+            </div>
+          )}
 
-        {/* Quote Form */}
-        {showQuoteForm && request.status === 'quote-requested' && !request.providerId && (
-          <div className="border-t pt-4 mt-4">
-            <h4 className="font-medium mb-4">Accept Request & Submit Quote</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor={`quote-amount-${request.id}`}>Quote Amount ($)</Label>
-                <Input
-                  id={`quote-amount-${request.id}`}
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={quoteAmount}
-                  onChange={(e) => setQuoteAmount(e.target.value)}
+          {/* Quote Form */}
+          {showQuoteForm && request.status === 'quote-requested' && !request.providerId && (
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-4">Accept Request & Submit Quote</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor={`quote-amount-${request.id}`}>Quote Amount ($)</Label>
+                  <Input
+                    id={`quote-amount-${request.id}`}
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={quoteAmount}
+                    onChange={(e) => setQuoteAmount(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`delivery-time-${request.id}`}>Estimated Delivery</Label>
+                  <Input
+                    id={`delivery-time-${request.id}`}
+                    type="date"
+                    value={estimatedDelivery}
+                    onChange={(e) => setEstimatedDelivery(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label htmlFor={`quote-notes-${request.id}`}>Additional Notes (Optional)</Label>
+                <Textarea
+                  id={`quote-notes-${request.id}`}
+                  placeholder="Any additional information for the customer..."
+                  value={quoteNotes}
+                  onChange={(e) => setQuoteNotes(e.target.value)}
+                  rows={3}
                 />
               </div>
-              <div>
-                <Label htmlFor={`delivery-time-${request.id}`}>Estimated Delivery</Label>
-                <Input
-                  id={`delivery-time-${request.id}`}
-                  type="date"
-                  value={estimatedDelivery}
-                  onChange={(e) => setEstimatedDelivery(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-            </div>
-            <div className="mt-4">
-              <Label htmlFor={`quote-notes-${request.id}`}>Additional Notes (Optional)</Label>
-              <Textarea
-                id={`quote-notes-${request.id}`}
-                placeholder="Any additional information for the customer..."
-                value={quoteNotes}
-                onChange={(e) => setQuoteNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-            <Button 
-              onClick={handleSubmitQuote}
-              disabled={submittingQuote || !quoteAmount}
-              className="mt-4"
-            >
-              {submittingQuote && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Accept & Submit Quote
-            </Button>
-          </div>
-        )}
-
-        {/* Show message if request is no longer available but form was open */}
-        {showQuoteForm && (request.status !== 'quote-requested' || request.providerId) && (
-          <div className="border-t pt-4 mt-4">
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <div className="flex items-center gap-2 text-yellow-400">
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-medium">Request No Longer Available</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                This request has been {request.providerId ? 'assigned to another provider' : `marked as ${request.status}`}.
-              </p>
               <Button 
-                onClick={() => setShowQuoteForm(false)}
-                variant="outline"
-                size="sm"
-                className="mt-3"
+                onClick={handleSubmitQuote}
+                disabled={submittingQuote || !quoteAmount}
+                className="mt-4"
               >
-                Close Form
+                {submittingQuote && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Accept & Submit Quote
               </Button>
             </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )}
+
+          {/* Show message if request is no longer available but form was open */}
+          {showQuoteForm && (request.status !== 'quote-requested' || request.providerId) && (
+            <div className="border-t pt-4 mt-4">
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <div className="flex items-center gap-2 text-yellow-400">
+                  <AlertCircle className="w-5 h-5" />
+                  <span className="font-medium">Request No Longer Available</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  This request has been {request.providerId ? 'assigned to another provider' : `marked as ${request.status}`}.
+                </p>
+                <Button 
+                  onClick={() => setShowQuoteForm(false)}
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                >
+                  Close Form
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -440,10 +433,10 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
   const isCompleted = order.status === 'completed';
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+    <AccordionItem value={order.id} className="border rounded-lg">
+      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-3 text-left">
             <Avatar className="w-10 h-10">
               <AvatarFallback>
                 {order.customerEmail ? order.customerEmail.slice(0, 2).toUpperCase() : 'CU'}
@@ -465,6 +458,9 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
                order.status === 'completed' ? 'Completed' :
                order.status}
             </Badge>
+            <span className="text-sm font-medium">
+              {formatPrice(order.quoteAmount || order.estimatedCost)}
+            </span>
             {isPaid && !isPrinting && !isCompleted && (
               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                 💰 Paid
@@ -482,231 +478,233 @@ const MyOrderCard: React.FC<MyOrderCardProps> = ({
             )}
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <h4 className="font-medium mb-2">Print Specifications</h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Material:</span>
-                <span>{order.material}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quality:</span>
-                <span>{order.quality}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quantity:</span>
-                <span>{order.quantity}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  {order.quoteAmount ? 'Quote Amount:' : 'Estimated Cost:'}
-                </span>
-                <span className="font-medium">
-                  {formatPrice(order.quoteAmount || order.estimatedCost)}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-medium mb-2">Files ({order.files.length})</h4>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {order.files.map((file, index) => (
-                <div key={index} className="flex items-center justify-between gap-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="truncate">{file.name}</span>
-                    <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
-                    onClick={async () => {
-                      try {
-                        let downloadUrl = file.downloadUrl;
-                        
-                        // If we have a storagePath but no download URL, get a fresh one
-                        if (!downloadUrl && file.storagePath) {
-                          downloadUrl = await getFileDownloadUrl(file.storagePath);
-                        }
-                        
-                        if (downloadUrl) {
-                          window.open(downloadUrl, '_blank');
-                        } else {
-                          toast.error('Download URL not available');
-                        }
-                      } catch (error) {
-                        console.error('Error getting download URL:', error);
-                        toast.error('Failed to get download URL');
-                      }
-                    }}
-                  >
-                    Download
-                  </Button>
-                </div>
-              ))}
-              {order.files.length > 3 && (
-                <p className="text-sm text-muted-foreground">
-                  +{order.files.length - 3} more files
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {order.requirements && (
-          <div>
-            <h4 className="font-medium mb-2">Requirements</h4>
-            <p className="text-sm text-muted-foreground">{order.requirements}</p>
-          </div>
-        )}
-
-        {/* Quote submitted info */}
-        {isQuoteSubmitted && order.quoteAmount && (
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-2">Quote Details</h4>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quote Amount:</span>
-                <span className="font-medium">{formatPrice(order.quoteAmount)}</span>
-              </div>
-              {order.estimatedDeliveryTime && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Estimated Delivery:</span>
-                  <span>{order.estimatedDeliveryTime}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Quote Sent:</span>
-                <span>{formatDate(order.quotedAt)}</span>
-              </div>
-            </div>
-            <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-sm text-yellow-400">
-                ⏳ Waiting for customer payment approval
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Paid order info - Ready to print */}
-        {isPaid && !isPrinting && !isCompleted && (
-          <div className="border-t pt-4">
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Check className="w-5 h-5 text-green-400" />
-                <h4 className="font-medium text-green-400">Order Paid - Ready to Print!</h4>
-              </div>
-              <div className="space-y-1 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Final Amount:</span>
-                  <span className="font-medium">{formatPrice(order.quoteAmount || order.estimatedCost)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Paid At:</span>
-                  <span>{formatDate(order.paidAt)}</span>
-                </div>
-              </div>
-              <Button 
-                onClick={() => onStartPrint(order.id)}
-                disabled={submittingQuote}
-                className="w-full"
-                size="lg"
-              >
-                {submittingQuote ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Starting Print...
-                  </>
-                ) : (
-                  <>
-                    <Layers className="w-4 h-4 mr-2" />
-                    Start Print Job
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Printing status */}
-        {isPrinting && (
-          <div className="border-t pt-4">
-            <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Layers className="w-5 h-5 text-orange-400" />
-                <h4 className="font-medium text-orange-400">Print Job In Progress</h4>
-              </div>
-              <div className="space-y-1 text-sm mb-4">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Started:</span>
-                  <span>{formatDate(order.updatedAt)}</span>
-                </div>
-                {order.timeline?.estimatedCompletion && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Est. Completion:</span>
-                    <span>{formatDate(order.timeline.estimatedCompletion)}</span>
-                  </div>
-                )}
-              </div>
-              <Button 
-                onClick={() => onCompletePrint(order.id)}
-                disabled={submittingQuote}
-                className="w-full"
-                size="lg"
-              >
-                {submittingQuote ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Completing...
-                  </>
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-2" />
-                    Mark as Completed
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Completed status */}
-        {isCompleted && (
-          <div className="border-t pt-4">
-            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Check className="w-5 h-5 text-emerald-400" />
-                <h4 className="font-medium text-emerald-400">Print Job Completed!</h4>
-              </div>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium mb-2">Print Specifications</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Completed:</span>
-                  <span>{formatDate(order.timeline?.actualCompletion || order.updatedAt)}</span>
+                  <span className="text-muted-foreground">Material:</span>
+                  <span>{order.material}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Final Amount:</span>
-                  <span className="font-medium">{formatPrice(order.budget?.final || order.quoteAmount || order.estimatedCost)}</span>
+                  <span className="text-muted-foreground">Quality:</span>
+                  <span>{order.quality}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quantity:</span>
+                  <span>{order.quantity}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    {order.quoteAmount ? 'Quote Amount:' : 'Estimated Cost:'}
+                  </span>
+                  <span className="font-medium">
+                    {formatPrice(order.quoteAmount || order.estimatedCost)}
+                  </span>
                 </div>
               </div>
-              <p className="text-sm text-emerald-400 mt-2">
-                🎉 Job completed successfully! Customer has been notified.
-              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Files ({order.files.length})</h4>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {order.files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                      <span className="truncate">{file.name}</span>
+                      <span className="text-muted-foreground">({formatFileSize(file.size)})</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-blue-600 hover:text-blue-800"
+                      onClick={async () => {
+                        try {
+                          let downloadUrl = file.downloadUrl;
+                          
+                          // If we have a storagePath but no download URL, get a fresh one
+                          if (!downloadUrl && file.storagePath) {
+                            downloadUrl = await getFileDownloadUrl(file.storagePath);
+                          }
+                          
+                          if (downloadUrl) {
+                            window.open(downloadUrl, '_blank');
+                          } else {
+                            toast.error('Download URL not available');
+                          }
+                        } catch (error) {
+                          console.error('Error getting download URL:', error);
+                          toast.error('Failed to get download URL');
+                        }
+                      }}
+                    >
+                      Download
+                    </Button>
+                  </div>
+                ))}
+                {order.files.length > 3 && (
+                  <p className="text-sm text-muted-foreground">
+                    +{order.files.length - 3} more files
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        )}
 
-        {order.location && (
-          <div className="flex items-center gap-2 text-sm">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <span>{order.location}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          {order.requirements && (
+            <div>
+              <h4 className="font-medium mb-2">Requirements</h4>
+              <p className="text-sm text-muted-foreground">{order.requirements}</p>
+            </div>
+          )}
+
+          {/* Quote submitted info */}
+          {isQuoteSubmitted && order.quoteAmount && (
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-2">Quote Details</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quote Amount:</span>
+                  <span className="font-medium">{formatPrice(order.quoteAmount)}</span>
+                </div>
+                {order.estimatedDeliveryTime && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Estimated Delivery:</span>
+                    <span>{order.estimatedDeliveryTime}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Quote Sent:</span>
+                  <span>{formatDate(order.quotedAt)}</span>
+                </div>
+              </div>
+              <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-sm text-yellow-400">
+                  ⏳ Waiting for customer payment approval
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Paid order info - Ready to print */}
+          {isPaid && !isPrinting && !isCompleted && (
+            <div className="border-t pt-4">
+              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Check className="w-5 h-5 text-green-400" />
+                  <h4 className="font-medium text-green-400">Order Paid - Ready to Print!</h4>
+                </div>
+                <div className="space-y-1 text-sm mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Final Amount:</span>
+                    <span className="font-medium">{formatPrice(order.quoteAmount || order.estimatedCost)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Paid At:</span>
+                    <span>{formatDate(order.paidAt)}</span>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => onStartPrint(order.id)}
+                  disabled={submittingQuote}
+                  className="w-full"
+                  size="lg"
+                >
+                  {submittingQuote ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Starting Print...
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="w-4 h-4 mr-2" />
+                      Start Print Job
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Printing status */}
+          {isPrinting && (
+            <div className="border-t pt-4">
+              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Layers className="w-5 h-5 text-orange-400" />
+                  <h4 className="font-medium text-orange-400">Print Job In Progress</h4>
+                </div>
+                <div className="space-y-1 text-sm mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Started:</span>
+                    <span>{formatDate(order.updatedAt)}</span>
+                  </div>
+                  {order.timeline?.estimatedCompletion && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Est. Completion:</span>
+                      <span>{formatDate(order.timeline.estimatedCompletion)}</span>
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  onClick={() => onCompletePrint(order.id)}
+                  disabled={submittingQuote}
+                  className="w-full"
+                  size="lg"
+                >
+                  {submittingQuote ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Mark as Completed
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Completed status */}
+          {isCompleted && (
+            <div className="border-t pt-4">
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Check className="w-5 h-5 text-emerald-400" />
+                  <h4 className="font-medium text-emerald-400">Print Job Completed!</h4>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Completed:</span>
+                    <span>{formatDate(order.timeline?.actualCompletion || order.updatedAt)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Final Amount:</span>
+                    <span className="font-medium">{formatPrice(order.budget?.final || order.quoteAmount || order.estimatedCost)}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-emerald-400 mt-2">
+                  🎉 Job completed successfully! Customer has been notified.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {order.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-muted-foreground" />
+              <span>{order.location}</span>
+            </div>
+          )}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -1322,7 +1320,7 @@ export const ManageRequestsComponent = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <Accordion type="multiple" className="space-y-2">
                 {filteredRequests.map((request) => (
                   <RequestCard 
                     key={request.id}
@@ -1335,7 +1333,7 @@ export const ManageRequestsComponent = () => {
                     getStatusColor={getStatusColor}
                   />
                 ))}
-              </div>
+              </Accordion>
             )}
           </TabsContent>
 
@@ -1352,7 +1350,7 @@ export const ManageRequestsComponent = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4">
+              <Accordion type="multiple" className="space-y-2">
                 {filteredMyOrders.map((order) => (
                   <MyOrderCard 
                     key={order.id}
@@ -1366,7 +1364,7 @@ export const ManageRequestsComponent = () => {
                     getStatusColor={getStatusColor}
                   />
                 ))}
-              </div>
+              </Accordion>
             )}
           </TabsContent>
         </Tabs>
