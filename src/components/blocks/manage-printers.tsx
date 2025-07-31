@@ -120,7 +120,8 @@ export const ManagePrinters = () => {
           description: data.description || '',
           condition: data.condition || 'Good',
           createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt
+          updatedAt: data.updatedAt,
+          imageUrls: data.imageUrls || []  // Add this line to map imageUrls from API response
         }));
         setPrinters(printersData);
       } catch (error) {
@@ -145,7 +146,7 @@ export const ManagePrinters = () => {
     setIsEditModalOpen(true);
   };
 
-  // Modified handleSaveAdd to use API
+  // Modified handleSaveAdd to use API and return response
   const handleSaveAdd = async (data: Partial<Printer>) => {
     if (data.name && data.model && data.location && data.location.length === 5) {
       try {
@@ -159,7 +160,8 @@ export const ManagePrinters = () => {
           description: data.description,
           isActive: data.available,
           buildVolume: data.buildVolume,
-          condition: data.condition
+          condition: data.condition,
+          imageUrls: data.imageUrls || []
         };
 
         const response = await printerAPI.create(printerData);
@@ -176,15 +178,17 @@ export const ManagePrinters = () => {
           location: data.location || '',
           description: data.description || '',
           condition: data.condition || 'Excellent',
-          imageUrls: data.imageUrls || [],
+          imageUrls: response.data.imageUrls || data.imageUrls || [],  // First check response for imageUrls
           createdAt: new Date().toISOString()
         };
-        
         setPrinters([...printers, newPrinter]);
-        setIsAddModalOpen(false);
+        
+        // For the two-step image upload process, return the response
+        return { data: response.data };
       } catch (error) {
         console.error('Error adding printer:', error);
         setError('Failed to add printer. Please try again.');
+        return null;
       }
     }
   };
@@ -203,31 +207,54 @@ export const ManagePrinters = () => {
           description: data.description,
           isActive: data.available,
           buildVolume: data.buildVolume,
-          condition: data.condition
+          condition: data.condition,
+          imageUrls: data.imageUrls || [] // <-- send imageUrls to backend
         };
 
-        await printerAPI.update(editingPrinter.id, printerData);
+        const response = await printerAPI.update(editingPrinter.id, printerData);
 
         setPrinters(printers.map(p => 
           p.id === editingPrinter.id ? { ...p, ...data } as Printer : p
         ));
         setIsEditModalOpen(false);
         setEditingPrinter(null);
+        
+        return { data: response };
       } catch (error) {
         console.error('Error updating printer:', error);
-        // You might want to show an error message to the user here
+        return null;
       }
     }
+    return null;
   };
 
-  // Modified handleRemove to use API
+  // Modified handleRemove to use API and clean up images
   const handleRemove = async (id: string) => {
     try {
+      // Find the printer to get its imageUrls
+      const printer = printers.find(p => p.id === id);
+      if (!printer) return;
+
+      // Delete all images associated with this printer from Firebase Storage
+      if (printer.imageUrls && printer.imageUrls.length > 0) {
+        await Promise.all(printer.imageUrls.map(url => deleteFile(url)));
+      }
+
+      // Delete the printer from the database
       await printerAPI.delete(id);
       setPrinters(printers.filter(p => p.id !== id));
+
+      toast({
+        title: "Printer deleted",
+        description: "The printer and all associated images have been removed."
+      });
     } catch (error) {
       console.error('Error removing printer:', error);
-      // You might want to show an error message to the user here
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete printer and/or associated images."
+      });
     }
   };
 
@@ -271,7 +298,7 @@ export const ManagePrinters = () => {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     title: string;
-    onSave: (data: Partial<Printer>) => void;
+    onSave: (data: Partial<Printer>) => Promise<{ data: any } | null | undefined>;
     initialData: Partial<Printer>;
   }
 
@@ -322,7 +349,7 @@ export const ManagePrinters = () => {
       }
     };
 
-    const uploadImages = async (): Promise<string[]> => {
+    const uploadImages = async (printerId?: string): Promise<string[]> => {
       if (!currentUser || !selectedImages.length) return [];
 
       const uploadedUrls: string[] = [];
@@ -333,16 +360,18 @@ export const ManagePrinters = () => {
         for (let i = 0; i < selectedImages.length; i++) {
           const file = selectedImages[i];
           const fileName = `${Date.now()}-${file.name}`;
-          const storagePath = `printers/${currentUser.uid}/${localFormData.id || 'new'}/${fileName}`;
-          
+          // Use provided printerId or fall back to localFormData.id
+          const finalPrinterId = printerId || localFormData.id || '';
+          const storagePath = `printers/${currentUser.uid}/${finalPrinterId}/${fileName}`;
+
           const uploadResult = await uploadFile({
             file,
-            requestId: localFormData.id || 'new',
+            requestId: finalPrinterId,
             userId: currentUser.uid,
             type: 'printers'
           });
           uploadedUrls.push(uploadResult.downloadUrl);
-          
+
           setUploadProgress(((i + 1) / totalFiles) * 100);
         }
         return uploadedUrls;
@@ -358,18 +387,53 @@ export const ManagePrinters = () => {
     const handleSave = async () => {
       try {
         setIsUploading(true);
-        const uploadedUrls = await uploadImages();
         
-        // Combine existing and new image URLs
-        const updatedFormData = {
-          ...localFormData,
-          imageUrls: [
-            ...(localFormData.imageUrls || []),
-            ...uploadedUrls
-          ]
-        };
+        // For add flow: first save printer without images to get ID
+        if (!localFormData.id) {
+          // Create printer first without images
+          const basicPrinterData = {
+            ...localFormData,
+            imageUrls: [] // Start with no images
+          };
+          
+          // Save and get response from API
+          const response = await onSave(basicPrinterData);
+          // Get printer ID from the response
+          const newPrinterId = response?.data?.id;
+          
+          if (newPrinterId && selectedImages.length > 0) {
+            // Now upload images with the new printer ID
+            const uploadedUrls = await uploadImages(newPrinterId);
+            if (uploadedUrls.length > 0) {
+              // Update the printer with image URLs directly through the API
+              await printerAPI.update(newPrinterId, {
+                imageUrls: uploadedUrls
+              });
+              
+              // Update the local state with the new image URLs
+              setPrinters(prevPrinters => 
+                prevPrinters.map(p => 
+                  p.id === newPrinterId 
+                    ? { ...p, imageUrls: uploadedUrls }
+                    : p
+                )
+              );
+            }
+          }
+        } else {
+          // For edit flow: upload images with existing printer ID
+          const uploadedUrls = await uploadImages();
+          // Combine existing and new image URLs
+          const updatedFormData = {
+            ...localFormData,
+            imageUrls: [
+              ...(localFormData.imageUrls || []),
+              ...uploadedUrls
+            ]
+          };
+          await onSave(updatedFormData);
+        }
         
-        await onSave(updatedFormData);
         onOpenChange(false);
       } catch (error) {
         console.error('Error saving printer:', error);

@@ -12,9 +12,14 @@ router.get('/', async (req, res) => {
     
     const printers = [];
     snapshot.forEach(doc => {
-      printers.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      // Always return imageUrls as an array
+      printers.push({
+        id: doc.id,
+        ...data,
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : []
+      });
     });
-    
     res.json(printers);
   } catch (error) {
     console.error('Error fetching printers:', error);
@@ -30,9 +35,9 @@ router.post('/', authenticateToken, async (req, res) => {
       ownerId: req.user.uid,
       createdAt: new Date(),
       updatedAt: new Date(),
-      isActive: true
+      isActive: true,
+      imageUrls: Array.isArray(req.body.imageUrls) ? req.body.imageUrls : []
     };
-    
     const docRef = await db.collection('printers').add(printerData);
     res.status(201).json({ id: docRef.id, ...printerData });
   } catch (error) {
@@ -47,9 +52,9 @@ router.put('/:id', authenticateToken, async (req, res) => {
     const printerId = req.params.id;
     const updates = {
       ...req.body,
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      imageUrls: Array.isArray(req.body.imageUrls) ? req.body.imageUrls : []
     };
-    
     await db.collection('printers').doc(printerId).update(updates);
     res.json({ id: printerId, ...updates });
   } catch (error) {
@@ -78,9 +83,13 @@ router.get('/my-printers', authenticateToken, async (req, res) => {
     
     const printers = [];
     snapshot.forEach(doc => {
-      printers.push({ id: doc.id, ...doc.data() });
+      const data = doc.data();
+      printers.push({
+        id: doc.id,
+        ...data,
+        imageUrls: Array.isArray(data.imageUrls) ? data.imageUrls : []
+      });
     });
-    
     res.json({ data: printers });
   } catch (error) {
     console.error('Error fetching user printers:', error);

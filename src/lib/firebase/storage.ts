@@ -30,7 +30,7 @@ export const uploadFile = async ({ file, requestId, userId, type }: UploadParams
     const sanitizedFileName = sanitizeFileName(file.name);
     // Create a structured path: type/requestId/userId/timestamp_filename
     const timestamp = Date.now();
-    const storagePath = `${type}/${requestId}/${userId}/${timestamp}_${sanitizedFileName}`;
+    const storagePath = `${type}/${userId}/${requestId}/${timestamp}_${sanitizedFileName}`;
     
     // Create a storage reference
     const storageRef = ref(storage, storagePath);
