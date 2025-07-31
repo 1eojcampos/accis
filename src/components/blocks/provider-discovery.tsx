@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
 import { printerAPI } from '@/lib/api'
 import { isValidZipCode, formatZipCode } from '@/lib/zipcode'
 import { 
@@ -34,6 +35,7 @@ interface Provider {
   isAvailable: boolean
   profileImage: string
   location: string  // ZIP code for the provider's location
+  imageUrls?: string[]  // Array of printer images from Firebase Storage
 }
 
 interface ProviderDiscoveryProps {
@@ -127,7 +129,8 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
           reviewCount: printer.reviewCount || 0,
           isAvailable: printer.isActive !== false && printer.available !== false,
           profileImage: '/api/placeholder/64/64',
-          location: printer.location || 'No ZIP code set'
+          location: printer.location || 'No ZIP code set',
+          imageUrls: printer.imageUrls || []
         }))
 
         // Calculate distances if customer ZIP code is provided
@@ -462,6 +465,29 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
                       {provider.isAvailable ? 'Available' : 'Busy'}
                     </Badge>
                   </div>
+
+                  {/* Printer Images */}
+                  {provider.imageUrls && provider.imageUrls.length > 0 && (
+                    <div className="mb-4">
+                      <Carousel className="w-full">
+                        <CarouselContent>
+                          {provider.imageUrls.map((url, index) => (
+                            <CarouselItem key={url}>
+                              <div className="aspect-video w-full relative rounded-lg overflow-hidden">
+                                <img
+                                  src={url}
+                                  alt={`${provider.name} printer image ${index + 1}`}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious />
+                        <CarouselNext />
+                      </Carousel>
+                    </div>
+                  )}
 
                   {/* Printer & Materials */}
                   <div className="mb-4">
