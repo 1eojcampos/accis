@@ -361,7 +361,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                 ) : (
                   <>
                     <CreditCard className="w-4 h-4 mr-2" />
-                    Test Pay {formatPrice(getQuoteAmount()!)}
+                    Pay {formatPrice(getQuoteAmount()!)}
                   </>
                 )}
               </Button>
