@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Email } from '@/components/ui/email';
-import { Phone } from '@/components/ui/phone';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Lock, Bell, Shield, Mail, Phone as PhoneIcon, Settings, Building, CreditCard } from 'lucide-react';
 

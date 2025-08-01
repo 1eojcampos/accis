@@ -73,6 +73,34 @@ interface UserProfile {
   };
 }
 
+interface CustomerProfile extends UserProfile {
+  role: 'customer';
+  orderPreferences?: {
+    defaultMaterial?: string;
+    defaultColor?: string;
+    defaultQuality?: 'draft' | 'standard' | 'high';
+  };
+  shippingAddresses?: {
+    id: string;
+    name: string;
+    isDefault: boolean;
+    address: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+  }[];
+  paymentMethods?: {
+    id: string;
+    type: 'card' | 'paypal';
+    isDefault: boolean;
+    last4?: string;
+    brand?: string;
+  }[];
+}
+
 interface ProviderProfile extends UserProfile {
   role: 'provider';
   businessDetails: {
@@ -332,6 +360,99 @@ function SecuritySettings({ profile }: { profile: UserProfile }) {
         </div>
       </div>
     </ProfileCard>
+  );
+}
+
+function CustomerSettings({ profile }: { profile: CustomerProfile }) {
+  return (
+    <>
+      <ProfileCard
+        title="Order Preferences"
+        icon={<Package2 className="h-5 w-5" />}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Default Material</label>
+            <input
+              defaultValue={profile.orderPreferences?.defaultMaterial}
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="e.g., PLA, ABS"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Default Color</label>
+            <input
+              defaultValue={profile.orderPreferences?.defaultColor}
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+              placeholder="e.g., Black, White"
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Print Quality</label>
+            <select
+              defaultValue={profile.orderPreferences?.defaultQuality}
+              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="draft">Draft - Faster, visible layers</option>
+              <option value="standard">Standard - Balanced quality</option>
+              <option value="high">High - Best quality, slower</option>
+            </select>
+          </div>
+          <Button>Save Preferences</Button>
+        </div>
+      </ProfileCard>
+
+      <ProfileCard
+        title="Shipping Addresses"
+        icon={<Truck className="h-5 w-5" />}
+      >
+        <div className="space-y-4">
+          {profile.shippingAddresses?.map((address) => (
+            <div key={address.id} className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h4 className="font-medium">{address.name}</h4>
+                  {address.isDefault && (
+                    <Badge variant="secondary">Default</Badge>
+                  )}
+                </div>
+                <Button variant="outline" size="sm">Edit</Button>
+              </div>
+              <p className="text-sm text-gray-600">
+                {address.address.street}<br />
+                {address.address.city}, {address.address.state} {address.address.zipCode}<br />
+                {address.address.country}
+              </p>
+            </div>
+          ))}
+          <Button className="w-full">Add New Address</Button>
+        </div>
+      </ProfileCard>
+
+      <ProfileCard
+        title="Payment Methods"
+        icon={<CreditCard className="h-5 w-5" />}
+      >
+        <div className="space-y-4">
+          {profile.paymentMethods?.map((method) => (
+            <div key={method.id} className="p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">
+                    {method.brand?.toUpperCase()} •••• {method.last4}
+                  </h4>
+                  {method.isDefault && (
+                    <Badge variant="secondary">Default</Badge>
+                  )}
+                </div>
+                <Button variant="outline" size="sm">Remove</Button>
+              </div>
+            </div>
+          ))}
+          <Button className="w-full">Add Payment Method</Button>
+        </div>
+      </ProfileCard>
+    </>
   );
 }
 
@@ -981,12 +1102,12 @@ export default function HomePage() {
           return null
         }
 
-        // Mock user profile data
-        const mockProfile: ProviderProfile = {
+        // Mock user profile data based on role
+        const mockProfile = userRole === 'provider' ? {
           id: "123",
           email: JSON.parse(localStorage.getItem('user') || '{}').email || '',
           fullName: "Sarah Johnson",
-          role: userRole as 'provider' | 'customer',
+          role: 'provider' as const,
           avatar: "https://images.unsplash.com/photo-1494790108755-2616c94",
           createdAt: "2023-01-15",
           preferences: {
@@ -1026,6 +1147,63 @@ export default function HomePage() {
             twoFactor: true,
             lastPasswordChanged: "2024-01-15"
           }
+        } : {
+          id: "124",
+          email: JSON.parse(localStorage.getItem('user') || '{}').email || '',
+          fullName: "John Customer",
+          role: 'customer' as const,
+          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
+          createdAt: "2023-02-20",
+          preferences: {
+            theme: "light",
+            notifications: {
+              email: true,
+              sms: false,
+              push: true
+            }
+          },
+          contact: {
+            phone: "+1 (555) 987-6543",
+            address: {
+              street: "456 Customer Lane",
+              city: "Los Angeles",
+              state: "CA",
+              zipCode: "90001",
+              country: "USA"
+            }
+          },
+          security: {
+            twoFactor: false,
+            lastPasswordChanged: "2024-02-15"
+          },
+          orderPreferences: {
+            defaultMaterial: "PLA",
+            defaultColor: "black",
+            defaultQuality: "standard"
+          },
+          shippingAddresses: [
+            {
+              id: "addr1",
+              name: "Home",
+              isDefault: true,
+              address: {
+                street: "456 Customer Lane",
+                city: "Los Angeles",
+                state: "CA",
+                zipCode: "90001",
+                country: "USA"
+              }
+            }
+          ],
+          paymentMethods: [
+            {
+              id: "pm1",
+              type: "card",
+              isDefault: true,
+              last4: "4242",
+              brand: "visa"
+            }
+          ]
         };
 
         const isProvider = userRole === 'provider';
@@ -1048,7 +1226,10 @@ export default function HomePage() {
 
                 <TabsContent value="account" className="space-y-6 pt-6">
                   <AccountInformation profile={mockProfile} />
-                  {isProvider && <ProviderSettings profile={mockProfile} />}
+                  {isProvider ? 
+                    <ProviderSettings profile={mockProfile as ProviderProfile} /> :
+                    <CustomerSettings profile={mockProfile as CustomerProfile} />
+                  }
                 </TabsContent>
 
                 <TabsContent value="contact" className="space-y-6 pt-6">
