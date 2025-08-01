@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel'
 import { printerAPI } from '@/lib/api'
 import { isValidZipCode, formatZipCode } from '@/lib/zipcode'
+import { calculateDistanceBetweenZipCodes, findNearbyZipCodes } from '@/lib/location-service'
 import { 
   MapPin, 
   Star, 
@@ -88,15 +89,17 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
     }
   }
 
-  // Calculate distance between two ZIP codes (mock implementation)
-  const calculateDistance = (zipCode1: string, zipCode2: string): number => {
+  // Calculate distance between two ZIP codes using Google Maps API
+  const calculateDistance = async (zipCode1: string, zipCode2: string): Promise<number> => {
     if (!zipCode1 || !zipCode2 || zipCode1 === zipCode2) return 0
     
-    // TODO: Replace with actual ZIP proximity service
-    // For now, return a mock distance based on ZIP code difference
-    const diff = Math.abs(parseInt(zipCode1) - parseInt(zipCode2))
-    const mockDistance = Math.min(25, diff / 1000 + Math.random() * 5)
-    return Math.round(mockDistance * 10) / 10 // Round to 1 decimal place
+    try {
+      const result = await calculateDistanceBetweenZipCodes(zipCode1, zipCode2);
+      return Math.round(result.distance * 10) / 10; // Round to 1 decimal place
+    } catch (error) {
+      console.error('Error calculating distance:', error);
+      return 0;
+    }
   }
   useEffect(() => {
     const fetchProviders = async () => {
@@ -135,30 +138,41 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
 
         // Calculate distances if customer ZIP code is provided
         if (customerZipCode && isValidZipCode(customerZipCode)) {
-          transformedProviders = transformedProviders.map((provider: Provider) => ({
-            ...provider,
-            distance: calculateDistance(customerZipCode, provider.location)
-          }))
+          // First find nearby ZIP codes within the radius
+          const nearbyZipCodes = await findNearbyZipCodes(customerZipCode, distanceRadius[0]);
+          
+          // Filter providers to those in nearby ZIP codes
+          transformedProviders = transformedProviders.filter((provider: Provider) => 
+            provider.location === customerZipCode || nearbyZipCodes.includes(provider.location)
+          );
+
+          // Calculate exact distances for the filtered providers
+          const providersWithDistance = await Promise.all(
+            transformedProviders.map(async (provider: Provider) => ({
+              ...provider,
+              distance: await calculateDistance(customerZipCode, provider.location)
+            }))
+          );
+
+          transformedProviders = providersWithDistance;
         } else {
           // No customer ZIP, set default distances
           transformedProviders = transformedProviders.map((provider: Provider) => ({
             ...provider,
             distance: 0 // Show 0 distance when no customer location
-          }))
+          }));
         }
 
-        // If we have a location filter (search by area), filter by that ZIP code area
+        // If we have a location filter (search by area), apply additional filtering
         if (locationFilter && isValidZipCode(locationFilter)) {
-          // Filter providers within the search radius of the location filter
-          transformedProviders = transformedProviders
-            .filter((provider: Provider) => {
-              if (provider.location === locationFilter) return true
-              if (!customerZipCode) return true // If no customer location, show all
-              
-              // Calculate distance from location filter to provider
-              const filterDistance = calculateDistance(locationFilter, provider.location)
-              return filterDistance <= distanceRadius[0]
-            })
+          // First find nearby ZIP codes for the location filter
+          const nearbyZipCodes = await findNearbyZipCodes(locationFilter, distanceRadius[0]);
+          
+          // Filter providers to those in nearby ZIP codes of the location filter
+          transformedProviders = transformedProviders.filter((provider: Provider) => 
+            provider.location === locationFilter || 
+            nearbyZipCodes.includes(provider.location)
+          );
         }
 
         // Sort by distance if we have customer location

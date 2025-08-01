@@ -366,41 +366,6 @@ function SecuritySettings({ profile }: { profile: UserProfile }) {
 function CustomerSettings({ profile }: { profile: CustomerProfile }) {
   return (
     <>
-      <ProfileCard
-        title="Order Preferences"
-        icon={<Package2 className="h-5 w-5" />}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Default Material</label>
-            <input
-              defaultValue={profile.orderPreferences?.defaultMaterial}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              placeholder="e.g., PLA, ABS"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Default Color</label>
-            <input
-              defaultValue={profile.orderPreferences?.defaultColor}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-              placeholder="e.g., Black, White"
-            />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Print Quality</label>
-            <select
-              defaultValue={profile.orderPreferences?.defaultQuality}
-              className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="draft">Draft - Faster, visible layers</option>
-              <option value="standard">Standard - Balanced quality</option>
-              <option value="high">High - Best quality, slower</option>
-            </select>
-          </div>
-          <Button>Save Preferences</Button>
-        </div>
-      </ProfileCard>
 
       <ProfileCard
         title="Shipping Addresses"
@@ -1111,7 +1076,7 @@ export default function HomePage() {
           avatar: "https://images.unsplash.com/photo-1494790108755-2616c94",
           createdAt: "2023-01-15",
           preferences: {
-            theme: "light",
+            theme: 'light' as const,
             notifications: {
               email: true,
               sms: true,
@@ -1155,7 +1120,7 @@ export default function HomePage() {
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde",
           createdAt: "2023-02-20",
           preferences: {
-            theme: "light",
+            theme: 'light' as const,
             notifications: {
               email: true,
               sms: false,

@@ -15,6 +15,7 @@
     "validate:migration": "node scripts/validate-migration.js"
   },
   "dependencies": {
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.1.1",
