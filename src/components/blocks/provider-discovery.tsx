@@ -51,7 +51,7 @@ export default function ProviderDiscovery({ onProviderSelect }: ProviderDiscover
   const [selectedPrinterTypes, setSelectedPrinterTypes] = useState<string[]>([])
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([])
   const [priceRange, setPriceRange] = useState([0, 150])
-  const [distanceRadius, setDistanceRadius] = useState([10])
+  const [distanceRadius, setDistanceRadius] = useState([25])
   const [showFilters, setShowFilters] = useState(false)
   const [providers, setProviders] = useState<Provider[]>([])
   const [loading, setLoading] = useState(true)

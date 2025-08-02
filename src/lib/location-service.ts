@@ -1,13 +1,4 @@
-import { Client } from "@googlemaps/google-maps-services-js";
-
-const client = new Client({});
-
-interface PlacesResult {
-  formatted_address?: string;
-  geometry: {
-    location: Location;
-  };
-}
+/// <reference types="@types/google.maps" />
 
 interface Location {
   lat: number;
@@ -19,21 +10,68 @@ interface DistanceResult {
   duration: string;
 }
 
+declare global {
+  interface Window {
+    google: typeof google;
+  }
+}
+
+// Helper function to load Google Maps script
+function loadGoogleMapsScript(): Promise<void> {
+  if (typeof window.google !== 'undefined') {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    // Create a callback function name
+    const callbackName = `googleMapsCallback${Date.now()}`;
+    
+    // Add the callback to the window object
+    (window as any)[callbackName] = () => {
+      resolve();
+      // Clean up by deleting the callback
+      delete (window as any)[callbackName];
+    };
+
+    // Create the script element
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,geometry&callback=${callbackName}&loading=async`;
+    script.async = true;
+    script.onerror = () => reject(new Error('Failed to load Google Maps script'));
+    
+    // Append the script to the document
+    document.head.appendChild(script);
+  });
+}
+
 export async function getZipCodeCoordinates(zipCode: string): Promise<Location> {
   try {
-    const response = await client.geocode({
-      params: {
-        address: zipCode,
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-        components: { country: 'US', postal_code: zipCode }
-      }
+    await loadGoogleMapsScript();
+    
+    return new Promise((resolve, reject) => {
+      const geocoder = new google.maps.Geocoder();
+      
+      geocoder.geocode(
+        { 
+          address: zipCode,
+          componentRestrictions: { 
+            country: 'US',
+            postalCode: zipCode 
+          }
+        },
+        (results, status) => {
+          if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+            const location = results[0].geometry.location;
+            resolve({
+              lat: location.lat(),
+              lng: location.lng()
+            });
+          } else {
+            reject(new Error('ZIP code not found'));
+          }
+        }
+      );
     });
-
-    if (response.data.results.length === 0) {
-      throw new Error('ZIP code not found');
-    }
-
-    return response.data.results[0].geometry.location;
   } catch (error) {
     console.error('Geocoding error:', error);
     throw error;
@@ -45,23 +83,36 @@ export async function calculateDistanceBetweenZipCodes(
   destinationZip: string
 ): Promise<DistanceResult> {
   try {
-    const response = await client.distancematrix({
-      params: {
-        origins: [originZip],
-        destinations: [destinationZip],
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!
-      }
-    });
-
-    if (!response.data.rows[0]?.elements[0]) {
-      throw new Error('Could not calculate distance');
-    }
-
-    const element = response.data.rows[0].elements[0];
+    await loadGoogleMapsScript();
     
+    const [originCoords, destCoords] = await Promise.all([
+      getZipCodeCoordinates(originZip),
+      getZipCodeCoordinates(destinationZip)
+    ]);
+
+    // Calculate distance using the geometry library
+    const originLatLng = new google.maps.LatLng(originCoords.lat, originCoords.lng);
+    const destLatLng = new google.maps.LatLng(destCoords.lat, destCoords.lng);
+    
+    const distanceInMeters = google.maps.geometry.spherical.computeDistanceBetween(
+      originLatLng,
+      destLatLng
+    );
+    
+    const distanceInMiles = distanceInMeters / 1609.34; // Convert meters to miles
+    
+    // Estimate duration based on average speed (45 mph)
+    const durationInHours = distanceInMiles / 45;
+    const hours = Math.floor(durationInHours);
+    const minutes = Math.round((durationInHours - hours) * 60);
+    
+    const durationText = hours > 0 
+      ? `${hours} hour${hours > 1 ? 's' : ''} ${minutes} min`
+      : `${minutes} min`;
+
     return {
-      distance: element.distance.value / 1609.34, // Convert meters to miles
-      duration: element.duration.text
+      distance: Math.round(distanceInMiles * 10) / 10, // Round to 1 decimal place
+      duration: durationText
     };
   } catch (error) {
     console.error('Distance calculation error:', error);
@@ -74,31 +125,72 @@ export async function findNearbyZipCodes(
   radiusMiles: number
 ): Promise<string[]> {
   try {
+    await loadGoogleMapsScript();
+    
     // First get the coordinates of the origin ZIP code
     const origin = await getZipCodeCoordinates(zipCode);
     
-    // Convert radius from miles to meters (Google Maps uses meters)
-    const radiusMeters = radiusMiles * 1609.34;
-
-    const response = await client.placesNearby({
-      params: {
-        location: origin,
-        radius: radiusMeters,
-        type: 'postal_code',
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!
+    // For US ZIP codes, we'll use a grid search approach
+    // Most ZIP codes are roughly 4-5 miles apart
+    // We'll create a grid of points around the origin and check each one
+    const nearbyZips = new Set<string>();
+    
+    // Create a grid of points
+    const stepSize = 3; // miles between each point
+    const steps = Math.ceil(radiusMiles / stepSize);
+    
+    const promises: Promise<string | null>[] = [];
+    
+    // Search in a square grid pattern
+    for (let x = -steps; x <= steps; x++) {
+      for (let y = -steps; y <= steps; y++) {
+        // Calculate the point's position
+        const point = new google.maps.LatLng(
+          origin.lat + (x * stepSize * 0.0145), // approx degrees per mile
+          origin.lng + (y * stepSize * 0.0145 / Math.cos(origin.lat * Math.PI / 180))
+        );
+        
+        // Check if this point is within our search radius
+        const distance = google.maps.geometry.spherical.computeDistanceBetween(
+          new google.maps.LatLng(origin.lat, origin.lng),
+          point
+        ) / 1609.34; // Convert to miles
+        
+        if (distance <= radiusMiles) {
+          // Create a geocoder promise for this point
+          promises.push(
+            new Promise<string | null>((resolve) => {
+              const geocoder = new google.maps.Geocoder();
+              geocoder.geocode(
+                { location: point },
+                (results, status) => {
+                  if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                    // Find postal code in address components
+                    const postalCode = results[0].address_components?.find(
+                      component => component.types.includes('postal_code')
+                    )?.short_name;
+                    resolve(postalCode || null);
+                  } else {
+                    resolve(null);
+                  }
+                }
+              );
+            })
+          );
+        }
       }
-    });
-
-    // Extract ZIP codes from the results
-    const nearbyZipCodes = response.data.results
-      .map(result => {
-        if (!result.formatted_address) return null;
-        const zipMatch = result.formatted_address.match(/\b\d{5}\b/);
-        return zipMatch ? zipMatch[0] : null;
-      })
-      .filter((zip): zip is string => zip !== null);
-
-    return nearbyZipCodes;
+    }
+    
+    // Wait for all geocoding requests to complete
+    const results = await Promise.all(promises);
+    
+    // Filter out duplicates and nulls
+    const validZips = results.filter((zip): zip is string => 
+      zip !== null && /^\d{5}$/.test(zip)
+    );
+    
+    return Array.from(new Set(validZips));
+    
   } catch (error) {
     console.error('Error finding nearby ZIP codes:', error);
     throw error;
